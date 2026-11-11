@@ -1,0 +1,27 @@
+import type { ReactNode } from "react"
+import { MarkdownRenderersContext } from "./use-markdown-renderers"
+
+/**
+ * Hooks for the pieces of a body that only the host app can resolve — an
+ * attachment key to an image, a wikilink target to whatever it names. The
+ * platform renderers read them from context rather than taking them as props,
+ * so adding one doesn't have to be threaded through every wrapper between the
+ * call site and the renderer.
+ */
+export interface MarkdownRenderers {
+  /** Renders an `attachment:<key>` image ref. */
+  renderImage?: (attachmentKey: string, alt: string) => ReactNode
+  /** Renders a `[[target]]` wikilink; `alias` is the label its text carried. */
+  renderWikilink?: (target: string, alias?: string) => ReactNode
+  /** Makes `#tag` chips clickable. */
+  onTagClick?: (name: string) => void
+  /** Optional host-specific inline links, e.g. a local date anchored in text. */
+  renderLink?: (url: string, children: ReactNode[]) => ReactNode | undefined
+}
+
+/**
+ * Provides the renderers for the bodies rendered beneath it. Mount it wherever
+ * the data they need is in scope — image refs resolve per card, so the card is
+ * the natural place. Unprovided refs fall back to plain markdown.
+ */
+export const MarkdownRenderersProvider = MarkdownRenderersContext.Provider

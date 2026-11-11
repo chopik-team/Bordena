@@ -1,0 +1,4 @@
+{
+  "extends": "@bordena/configs/tsconfig/neutral.json",
+  "include": ["src", "tests"]
+}

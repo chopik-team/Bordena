@@ -1,0 +1,20 @@
+{
+  "name": "@bordena/client-db",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./client-db": "./src/client-db.ts",
+    "./sqlite": "./src/adapters/sqlite-db.ts"
+  },
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "devDependencies": {
+    "@bordena/configs": "workspace:*",
+    "fake-indexeddb": "^6.2.5",
+    "vitest": "^5.0.2"
+  }
+}

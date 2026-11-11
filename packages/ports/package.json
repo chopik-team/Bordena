@@ -1,0 +1,21 @@
+{
+  "name": "@bordena/ports",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@bordena/client-db": "workspace:*",
+    "@bordena/file-storage": "workspace:*"
+  },
+  "devDependencies": {
+    "@bordena/configs": "workspace:*",
+    "@types/node": "^22",
+    "typescript": "~6.0.3"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  }
+}

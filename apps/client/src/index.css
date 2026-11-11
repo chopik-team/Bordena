@@ -1,0 +1,779 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "@fontsource-variable/geist-mono";
+@import "@fontsource-variable/mulish";
+
+@import "@bordena/tokens/tokens.css";
+@import "@bordena/tokens/theme.css";
+
+@source "../../../packages/ui-kit/src";
+@source "../../../packages/markdown/src";
+@source "../../../packages/editor/src";
+
+@custom-variant dark (&:is(.dark *));
+/* State variants used by our Base UI primitives; no CLI styles at runtime. */
+@custom-variant data-open (&:where([data-state="open"], [data-open]:not([data-open="false"])));
+@custom-variant data-closed (&:where([data-state="closed"], [data-closed]:not([data-closed="false"])));
+@custom-variant data-checked (&:where([data-state="checked"], [data-checked]:not([data-checked="false"])));
+
+[data-board-surface][data-panning],
+[data-board-surface][data-panning] * {
+  cursor: grabbing !important;
+}
+[data-matrix-cell][data-pointer-target] {
+  box-shadow: inset 0 0 0 2px var(--primary);
+}
+[data-section-target] {
+  outline: 2px dashed color-mix(in oklab, var(--primary) 50%, transparent);
+  outline-offset: -2px;
+  background: color-mix(in oklab, var(--primary) 4%, transparent);
+}
+
+@theme {
+  --breakpoint-xs: 430px;
+}
+
+@theme inline {
+  --font-heading: var(--font-sans);
+  --font-sans: "Mulish Variable", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "Geist Mono Variable", ui-monospace, monospace;
+  --color-sidebar-ring: var(--sidebar-ring);
+}
+
+:root {
+  --radius: 0.625rem;
+  --sidebar-ring: #725cff;
+  --scrollbar-thumb: #d8dae1;
+  --scrollbar-thumb-hover: #bcbfca;
+}
+
+.dark:root {
+  --sidebar-ring: #9585ff;
+  --scrollbar-thumb: #ffffff1f;
+  --scrollbar-thumb-hover: #ffffff3d;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+  html {
+    @apply font-sans;
+    font-size: 16px;
+  }
+  ::selection {
+    background-color: color-mix(in oklab, var(--primary) 25%, transparent);
+  }
+  /* The quick-note popup is a transparent window; the page draws its own card. */
+  html.quick-note,
+  html.quick-note body {
+    background: transparent;
+  }
+  /* Caret menus height. */
+  html.quick-note {
+    --menu-max-height: 9rem;
+  }
+  /* Disable the macOS WKWebView rubber-band/overscroll */
+  html,
+  body {
+    overscroll-behavior: none;
+    height: var(--app-height, 100%);
+    overflow: hidden;
+  }
+
+  /* Thin, theme-aware scrollbars. macOS overlays auto-hide, but Windows/Linux
+     render the chunky OS default — so style both the standard (Firefox) and
+     WebKit/Chromium sides. The transparent border draws the thumb inset with a
+     padding gap and keeps its rounded shape. */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--scrollbar-thumb) transparent;
+  }
+  *::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  *::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  *::-webkit-scrollbar-thumb {
+    background-color: var(--scrollbar-thumb);
+    border: 2px solid transparent;
+    border-radius: 9999px;
+    background-clip: padding-box;
+  }
+  *::-webkit-scrollbar-thumb:hover {
+    background-color: var(--scrollbar-thumb-hover);
+  }
+  *::-webkit-scrollbar-corner {
+    background: transparent;
+  }
+}
+
+button {
+  cursor: pointer;
+}
+/* The logo asset stays unchanged. Shared in both themes; no JS hover listeners. */
+.app-logo-trigger {
+  cursor: pointer;
+}
+.app-logo-trigger:focus-visible {
+  outline: 2px solid #7868ee;
+  outline-offset: 3px;
+}
+.app-logo-image {
+  filter: drop-shadow(0 0 0 transparent);
+  transition: filter 200ms ease-in-out;
+}
+.app-logo-trigger:hover .app-logo-image,
+.app-logo-trigger:focus-visible .app-logo-image {
+  filter: drop-shadow(0 0 5px #638bff99) drop-shadow(0 0 9px #8b5cf666);
+}
+@media (prefers-reduced-motion: reduce) {
+  .app-logo-image {
+    transition: none;
+  }
+}
+html[data-animations="off"] *,
+html[data-animations="off"] *::before,
+html[data-animations="off"] *::after {
+  animation-duration: 0ms !important;
+  transition-duration: 0ms !important;
+  scroll-behavior: auto !important;
+}
+html[data-scrolling="smooth"] [data-board-surface],
+html[data-scrolling="smooth"] [data-layout-lane] {
+  scroll-behavior: smooth;
+}
+[data-board-surface][data-panning="true"],
+[data-board-dragging="true"] [data-layout-lane] {
+  scroll-behavior: auto !important;
+}
+html[data-density="compact"] .bordena-section {
+  padding-bottom: 8px;
+}
+html[data-density="compact"] .bordena-section > div:first-child {
+  height: 42px;
+}
+html[data-density="compact"] .bordena-section > div:nth-child(2) {
+  padding: 8px;
+}
+html[data-density="compact"] .bordena-section [data-rfd-draggable-id] {
+  margin-bottom: 6px;
+}
+button:focus-visible,
+select:focus-visible,
+summary:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+[data-section-target="true"] {
+  outline: 2px dashed var(--ring);
+  outline-offset: 3px;
+}
+.bordena-overdue {
+  border-left: 3px solid var(--destructive);
+  animation: bordena-deadline-accent 2.6s ease-in-out infinite;
+}
+@keyframes bordena-deadline-accent {
+  0%,
+  100% {
+    border-left-color: color-mix(in oklab, var(--destructive) 55%, transparent);
+  }
+  50% {
+    border-left-color: var(--destructive);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .bordena-overdue {
+    animation: none;
+  }
+}
+.calendar-month-grid {
+  animation: calendar-period-in 180ms ease-out;
+}
+@keyframes calendar-period-in {
+  from {
+    opacity: 0.55;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+[data-calendar-day][data-drop-target="true"] {
+  background-color: color-mix(in srgb, var(--primary) 15%, transparent);
+  outline: 2px solid var(--ring);
+  outline-offset: -2px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .calendar-month-grid {
+    animation: none;
+  }
+}
+
+/* Bordena 0.7.1 — shared visual hierarchy, without changing board records. */
+:root {
+  --primary: #7354ed;
+  --ring: #8c75f8;
+  --radius: 0.75rem;
+  --surface-lane: #eceef5;
+  --surface-section: #f2f3f8;
+  --surface-card: #ffffff;
+  --surface-hover: #f8f7ff;
+  --line-subtle: #dce0ec;
+  --calendar-line: #e2e5ef;
+  --space-board: 20px;
+  --control-height: 38px;
+  --card-radius: 11px;
+}
+.dark:root {
+  --background: #111a2c;
+  --foreground: #f0f3fc;
+  --card: #222e46;
+  --card-foreground: #f0f3fc;
+  --sidebar: #121a2a;
+  --sidebar-foreground: #e4eafa;
+  --popover: #202b42;
+  --popover-foreground: #f0f3fc;
+  --muted: #26334c;
+  --muted-foreground: #a6b3ce;
+  --border: #33415c;
+  --input: #33415c;
+  --accent: #303957;
+  --accent-foreground: #ffffff;
+  --primary: #8b76ff;
+  --surface-lane: #172238;
+  --surface-section: #1b273e;
+  --surface-card: #24314b;
+  --surface-hover: #2a3754;
+  --line-subtle: #35425e;
+  --calendar-line: #2b3851;
+}
+.bordena-board-header,
+.bordena-calendar-header {
+  min-height: 88px;
+  padding: 20px 24px;
+  gap: 16px;
+}
+.bordena-board-header {
+  display: grid;
+  grid-template-columns: 36px minmax(160px, 1fr) auto auto;
+}
+.bordena-board-title {
+  width: 100%;
+  font-size: 23px;
+  line-height: 1.3;
+  padding-inline: 0;
+}
+.bordena-board-actions {
+  justify-self: end;
+}
+.bordena-board-header [data-slot="button"],
+.bordena-calendar-header [data-slot="button"] {
+  min-height: var(--control-height);
+  min-width: 36px;
+}
+.bordena-board-actions > [data-slot="button"]:first-child {
+  padding-inline: 18px;
+}
+.bordena-view-switch {
+  padding: 4px;
+  border-color: var(--line-subtle);
+  background: var(--surface-lane);
+  flex-shrink: 0;
+}
+.bordena-view-switch button {
+  min-height: 34px;
+  font-weight: 600;
+}
+.bordena-view-switch button[aria-pressed="true"] {
+  background: color-mix(in srgb, var(--primary) 32%, var(--surface-lane));
+  box-shadow: inset 0 0 0 1px
+    color-mix(in srgb, var(--primary) 40%, transparent);
+  color: var(--foreground);
+}
+[data-board-surface] {
+  gap: var(--space-board);
+  padding: 20px 24px 0;
+}
+.bordena-lane {
+  background: var(--surface-lane);
+  border: 1px solid var(--line-subtle);
+  border-radius: 14px;
+  padding: 14px 12px;
+  scrollbar-gutter: stable;
+}
+.bordena-lane-heading {
+  font-size: 15px;
+  min-height: 38px;
+  margin-bottom: 10px;
+  padding-inline: 8px;
+}
+.bordena-lane-heading > span:last-child {
+  background: var(--surface-section);
+  border-radius: 6px;
+  padding: 2px 6px;
+}
+.bordena-add-section {
+  display: flex;
+  min-height: 32px;
+  background: transparent;
+  font-size: 12px;
+  color: var(--muted-foreground);
+  border: 1px dashed color-mix(in srgb, var(--border) 70%, transparent);
+}
+.bordena-lane .bordena-section {
+  width: 100%;
+  max-width: 640px;
+  margin-inline: auto;
+  padding-bottom: 18px;
+}
+.bordena-lane .bordena-lane-heading,
+.bordena-lane .bordena-add-section {
+  max-width: 640px;
+  margin-inline: auto;
+}
+.bordena-section > div:first-child {
+  border-radius: 9px 9px 0 0;
+  min-height: 44px;
+  height: auto;
+  padding: 7px 8px;
+  background-color: var(--surface-section);
+  color: var(--foreground);
+  border-bottom: 1px solid var(--line-subtle);
+}
+.bordena-section > div:nth-child(2) {
+  padding: 10px 4px;
+  background: transparent;
+  border: 0;
+}
+.bordena-section > div:nth-child(2) > button {
+  margin-top: 4px;
+  min-height: 34px;
+  background: transparent;
+  font-size: 12px;
+}
+.bordena-card {
+  max-width: none;
+}
+.bordena-card [data-slot="card"] {
+  padding-block: 12px;
+  gap: 6px;
+  background: var(--surface-card);
+  border: 1px solid var(--line-subtle);
+  border-radius: var(--card-radius);
+  box-shadow: 0 3px 10px #0000000b;
+  transition:
+    border-color 150ms,
+    background-color 150ms,
+    box-shadow 150ms;
+}
+.bordena-card[data-card-color] [data-slot="card"] {
+  box-shadow:
+    inset 3px 0 var(--card-user-color),
+    0 3px 10px #0000000b;
+}
+.bordena-card:hover [data-slot="card"] {
+  background: var(--surface-hover);
+  border-color: color-mix(in srgb, var(--primary) 50%, var(--line-subtle));
+}
+.bordena-card:focus-visible,
+.bordena-card:focus-within {
+  outline: 2px solid color-mix(in srgb, var(--ring) 65%, transparent);
+  outline-offset: 2px;
+}
+.bordena-card [data-slot="card-header"],
+.bordena-card [data-slot="card-content"] {
+  padding-inline: 16px;
+}
+.bordena-card [data-slot="card-title"] {
+  font-size: 15px;
+  line-height: 1.45;
+  font-weight: 650;
+}
+.bordena-card [data-slot="card-content"] {
+  border-top: 0;
+  font-size: 13px;
+  line-height: 1.5;
+}
+.bordena-card .preview {
+  font-size: 13px;
+  line-height: 1.5;
+}
+.bordena-card .preview > p {
+  margin-block: 0;
+}
+.bordena-card [data-slot="card-content"] {
+  padding-top: 0;
+}
+.bordena-card [data-slot="card-content"] > .mt-2 {
+  margin-top: 0;
+}
+.bordena-note-preview[data-bounded="true"]:not([data-expanded="true"]) {
+  max-height: 76px;
+  overflow: auto;
+  scrollbar-width: thin;
+}
+.bordena-preview-toggle {
+  display: block;
+  margin-top: 8px;
+  min-height: 24px;
+}
+.bordena-card [data-slot="card-action"],
+.bordena-section-actions {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 150ms;
+}
+.bordena-card:hover [data-slot="card-action"],
+.bordena-card:focus-within [data-slot="card-action"],
+.bordena-section:hover .bordena-section-actions,
+.bordena-section:focus-within .bordena-section-actions {
+  opacity: 1;
+  pointer-events: auto;
+}
+/* Navigation spacing is owned here rather than accumulated group margins. */
+.bordena-sidebar-content {
+  gap: 12px;
+  margin-top: 2px;
+  padding-inline: 4px;
+}
+.bordena-sidebar-content [data-slot="sidebar-group"] {
+  padding-block: 0;
+}
+.bordena-sidebar-main {
+  gap: 2px;
+}
+.bordena-global-search {
+  margin-bottom: 8px;
+  border: 1px solid var(--line-subtle);
+  background: color-mix(in srgb, var(--muted) 24%, transparent);
+}
+.bordena-workspaces {
+  margin: 6px 0 0;
+}
+.bordena-sidebar-caption {
+  padding: 4px 2px;
+  font-size: 11px;
+  font-weight: 650;
+  color: var(--muted-foreground);
+  letter-spacing: 0.03em;
+}
+.bordena-sidebar-section > summary {
+  font-size: 12px;
+  padding-block: 8px;
+}
+.bordena-sidebar-content [data-slot="sidebar-menu-button"] {
+  height: 36px;
+  font-size: 13px;
+}
+[data-slot="sidebar-menu-button"][data-active],
+.bordena-calendar-navigation > [data-active="true"] {
+  background: color-mix(in srgb, var(--primary) 26%, transparent);
+  color: var(--foreground);
+  box-shadow: inset 2px 0 var(--primary);
+}
+.bordena-favorite {
+  opacity: 0;
+}
+.bordena-favorite.is-favorite,
+.bordena-board-nav-row:hover .bordena-favorite,
+.bordena-board-nav-row:focus-within .bordena-favorite {
+  opacity: 1;
+}
+.bordena-favorite.is-favorite {
+  color: var(--primary);
+}
+.bordena-tab [role="tab"][aria-selected="true"] {
+  background: color-mix(in srgb, var(--primary) 24%, var(--background));
+}
+[data-focus="true"] .bordena-tab {
+  display: none;
+}
+/* Calendar uses the same surfaces and control scale as the board. */
+.bordena-calendar-header h1 {
+  font-size: 26px;
+  line-height: 1.25;
+  letter-spacing: -0.025em;
+}
+.bordena-calendar-header h1::first-letter {
+  text-transform: uppercase;
+}
+.bordena-calendar-filters {
+  gap: 10px;
+  background: color-mix(in srgb, var(--surface-lane) 70%, var(--background));
+}
+.bordena-calendar-filters > [data-slot="button"] {
+  min-height: 36px;
+}
+.bordena-weekdays {
+  font-weight: 650;
+  letter-spacing: 0.02em;
+  border-color: var(--calendar-line);
+}
+.bordena-month-day {
+  border-color: var(--calendar-line);
+  background: color-mix(in srgb, var(--surface-lane) 40%, var(--background));
+}
+.bordena-month-day[data-today="true"] {
+  background: color-mix(in srgb, var(--primary) 7%, var(--background));
+}
+.calendar-month-grid > [data-calendar-day] {
+  min-height: 70px;
+}
+.calendar-month-grid > [data-calendar-day] > button:first-child {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 27px;
+  min-height: 27px;
+  font-size: 13px;
+  font-weight: 650;
+  margin-bottom: 7px;
+}
+.calendar-month-grid > [data-other-month="true"] > button:first-child {
+  opacity: 0.4;
+}
+.bordena-calendar-event {
+  padding: 7px 9px;
+  line-height: 1.4;
+  font-size: 13px;
+  font-weight: 600;
+  box-shadow: 0 2px 4px #00000008;
+}
+.bordena-event-time {
+  font-size: 12px;
+  font-weight: 400;
+  margin-top: 3px;
+}
+.calendar-month-grid > [data-calendar-day] > button:last-child.text-primary {
+  position: absolute;
+  right: 8px;
+  bottom: 3px;
+  background: var(--background);
+}
+.bordena-calendar-panel {
+  width: 336px;
+  box-shadow: -6px 0 24px #0000000c;
+  padding: 18px;
+  background: var(--surface-lane);
+}
+.bordena-calendar-panel-tabs {
+  background: var(--surface-lane);
+}
+.bordena-calendar-panel-tabs > button {
+  font-size: 13px;
+  min-height: 34px;
+  font-weight: 600;
+}
+.bordena-calendar-panel-tabs > button[aria-pressed="true"] {
+  background: color-mix(in srgb, var(--primary) 27%, var(--surface-lane));
+}
+.bordena-planning-task {
+  background: var(--surface-card);
+  border-color: var(--line-subtle);
+  box-shadow: 0 2px 6px #00000008;
+  line-height: 1.5;
+}
+html[data-density="compact"] {
+  --space-board: 14px;
+  --control-height: 34px;
+}
+html[data-density="compact"] .bordena-board-header,
+html[data-density="compact"] .bordena-calendar-header {
+  min-height: 66px;
+  padding-block: 12px;
+}
+html[data-density="compact"] .bordena-lane {
+  padding: 10px 8px;
+}
+html[data-density="compact"] .bordena-card [data-slot="card"] {
+  padding-block: 10px;
+}
+html[data-density="compact"] .bordena-calendar-event {
+  padding: 4px 7px;
+}
+@media (max-width: 1099px) {
+  .bordena-calendar-panel {
+    position: absolute;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    z-index: 35;
+    width: min(336px, calc(100% - 16px));
+    box-shadow: -8px 0 24px #0003;
+  }
+}
+@media (max-width: 900px) {
+  .bordena-board-header {
+    grid-template-columns: 32px minmax(0, 1fr) auto;
+    gap: 10px;
+    padding: 14px 16px;
+  }
+  .bordena-board-title {
+    font-size: 20px;
+  }
+  .bordena-board-views {
+    grid-column: 2 / -1;
+    grid-row: 2;
+  }
+  .bordena-board-actions {
+    grid-column: 3;
+    grid-row: 1;
+  }
+  .bordena-calendar-header {
+    padding: 14px 16px;
+    gap: 10px;
+  }
+  .bordena-calendar-header h1 {
+    font-size: 22px;
+  }
+  [data-board-surface] {
+    padding: 14px 16px 0;
+  }
+  .bordena-calendar-event {
+    padding: 4px 6px;
+    font-size: 12px;
+  }
+  .bordena-month-day {
+    padding: 6px;
+  }
+  .bordena-event-time {
+    font-size: 11px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .bordena-card [data-slot="card"],
+  .bordena-section-actions {
+    transition: none;
+  }
+}
+
+.bordena-note-preview[data-bounded="true"]:not([data-expanded="true"]) {
+  mask-image: linear-gradient(to bottom, #000 calc(100% - 12px), transparent);
+}
+@media (max-height: 850px) {
+  .bordena-calendar-header {
+    min-height: 74px;
+    padding-block: 14px;
+  }
+  .bordena-calendar-filters {
+    padding-block: 8px;
+  }
+  .bordena-month-day {
+    padding: 6px 8px;
+  }
+  .calendar-month-grid > [data-calendar-day] > button:first-child {
+    min-height: 20px;
+    min-width: 22px;
+    font-size: 12px;
+    margin-bottom: 3px;
+  }
+  .bordena-calendar-event {
+    padding: 3px 6px;
+    line-height: 1.25;
+    font-size: 12px;
+    margin-bottom: 4px;
+  }
+  .bordena-event-time {
+    font-size: 11px;
+    margin-top: 1px;
+    line-height: 1.25;
+  }
+}
+@media (max-height: 700px) {
+  .calendar-month-grid .bordena-event-time {
+    display: none;
+  }
+  .bordena-month-day {
+    padding: 4px 6px;
+  }
+  .bordena-calendar-event {
+    padding: 3px 5px;
+  }
+}
+
+.bordena-board-header {
+  container: board-heading / inline-size;
+}
+.bordena-calendar-header {
+  container: calendar-heading / inline-size;
+}
+.bordena-calendar-header h1 {
+  min-width: max-content;
+  flex-basis: 180px;
+}
+@container board-heading (max-width:1200px) {
+  .bordena-view-switch {
+    display: none;
+  }
+  .bordena-view-select {
+    display: block;
+  }
+}
+@container calendar-heading (max-width:1200px) {
+  .bordena-view-switch {
+    display: none;
+  }
+  .bordena-view-select {
+    display: block;
+  }
+}
+@media (max-width: 900px) {
+  .bordena-board-title {
+    -webkit-line-clamp: 2;
+  }
+}
+
+/* One desktop focus control; the drawer trigger remains available below 1100px. */
+@media(min-width:1100px){
+
+ .bordena-board-header{grid-template-columns:minmax(160px,1fr) auto auto;}
+}
+
+/* Bordena 0.8: structural lanes have neutral drop space, not full-height cards. */
+.bordena-lane { background:transparent; border:0; border-radius:0; padding:0 2px 20px; }
+.bordena-lane-heading { background:transparent; gap:4px; padding:0 4px; min-height:38px; }
+.bordena-lane-heading [data-slot=button] { min-width:30px; }
+.bordena-board-header { display:flex; flex-wrap:wrap; min-height:68px; padding:12px 20px; gap:12px; }
+.bordena-board-title { width:auto; flex:0 1 auto; max-width:100%; font-size:22px; }
+.bordena-board-views { flex:0 1 auto; }
+.bordena-board-actions { margin-left:auto; display:flex; }
+.bordena-calendar-header { min-height:68px; padding:12px 20px; }
+.bordena-calendar-filters { padding:8px 20px; }
+.bordena-calendar-navigation [data-active=true] { background:color-mix(in srgb,var(--primary) 26%,transparent); color:var(--foreground); border-radius:8px; }
+.bordena-sidebar-content { gap:14px; }
+.bordena-calendar-navigation button, .bordena-board-nav-row { min-height:36px; }
+@media (max-width:1000px) { .bordena-board-title { flex:1 1 150px; } }
+.bordena-year { padding:20px; }
+.bordena-year-months { display:grid; grid-template-columns:repeat(4,minmax(190px,1fr)); gap:16px; }
+.bordena-mini-month { padding:12px; border:1px solid var(--border); border-radius:10px; background:var(--surface-lane); }
+.bordena-mini-title { display:flex; justify-content:space-between; width:100%; padding:0 4px 10px; font-weight:700; text-transform:capitalize; text-align:left; }
+.bordena-mini-grid { display:grid; grid-template-columns:repeat(7,minmax(0,1fr)); gap:2px; text-align:center; font-size:12px; }
+.bordena-mini-grid > span { padding:2px 0; }
+.bordena-mini-grid > button { position:relative; min-height:26px; border-radius:6px; }
+.bordena-mini-grid [data-busy] { background:color-mix(in srgb,var(--primary) 18%,transparent); }
+.bordena-mini-grid [data-today] { background:var(--primary); color:var(--primary-foreground); font-weight:700; }
+.bordena-mini-dot { position:absolute; bottom:1px; left:calc(50% - 1.5px); width:3px; height:3px; background:currentColor; border-radius:50%; }
+.bordena-mini-title:focus-visible,.bordena-mini-grid button:focus-visible,.bordena-year-bar:focus-visible { outline:2px solid var(--primary); outline-offset:2px; }
+.bordena-mini-grid button:hover { box-shadow:inset 0 0 0 1px var(--primary); }
+.bordena-year-chart { margin-top:18px; padding:14px; border:1px solid var(--border); background:var(--surface-lane); border-radius:10px; font-size:13px; }
+.bordena-year-chart summary { cursor:pointer; font-size:15px; font-weight:700; }
+.bordena-year-bars { display:grid; grid-template-columns:repeat(12,minmax(38px,1fr)); gap:8px; overflow:auto; }
+.bordena-year-bar { display:flex; flex-direction:column; align-items:center; gap:4px; font-size:12px; border-radius:5px; }
+.bordena-year-bar-track { width:min(36px,80%); height:76px; display:flex; align-items:flex-end; border-bottom:1px solid var(--border); }
+.bordena-year-bar-track > span { width:100%; background:var(--primary); border-radius:4px 4px 0 0; min-height:0; }
+@container (max-width:1150px) { .bordena-year-months { grid-template-columns:repeat(3,minmax(175px,1fr)); } }
+@container (max-width:720px) { .bordena-year-months { grid-template-columns:repeat(2,minmax(160px,1fr)); gap:10px; } }
+@media(max-width:800px) { .bordena-year-months { grid-template-columns:repeat(2,minmax(150px,1fr)); gap:10px; } .bordena-year { padding:12px; } }
+main[data-calendar-scroll] { container-type:inline-size; }
+.bordena-mini-colors { position:absolute; bottom:1px; left:0; right:0; display:flex; justify-content:center; gap:2px; }
+.bordena-mini-colors .bordena-mini-dot { position:static; display:block; width:4px; height:4px; }
+[data-unschedule-target=true] { outline:2px dashed var(--primary); outline-offset:-4px; background:color-mix(in srgb,var(--primary) 10%,var(--background)); }
+[draggable=true][data-calendar-event] { cursor:grab; }
+[draggable=true][data-calendar-event]:active { cursor:grabbing; }

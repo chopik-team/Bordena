@@ -1,0 +1,41 @@
+{
+  "name": "@bordena/editor",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@codemirror/autocomplete": "^6.20.3",
+    "@codemirror/commands": "^6.11.1",
+    "@codemirror/lang-markdown": "^6.5.2",
+    "@codemirror/language": "^6.12.4",
+    "@codemirror/state": "^6.7.6",
+    "@codemirror/view": "^6.43.13",
+    "@bordena/core": "workspace:*",
+    "@bordena/markdown": "workspace:*",
+    "@bordena/ui-kit": "workspace:*",
+    "@lezer/highlight": "^1.2.5",
+    "@lezer/markdown": "^1.7.2",
+    "@bordena/i18n": "workspace:*"
+  },
+  "peerDependencies": {
+    "react": "^19",
+    "react-dom": "^19"
+  },
+  "devDependencies": {
+    "@bordena/configs": "workspace:*",
+    "@types/react": "~19.2.18",
+    "@types/react-dom": "~19.2.5",
+    "eslint": "^10.11.0",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8",
+    "typescript": "~6"
+  }
+}

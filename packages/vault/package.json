@@ -1,0 +1,29 @@
+{
+  "name": "@bordena/vault",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "@bordena/contract": "workspace:*",
+    "yaml": "^2.9.1"
+  },
+  "devDependencies": {
+    "@bordena/configs": "workspace:*",
+    "@bordena/core": "workspace:*",
+    "@bordena/ports": "workspace:*",
+    "@types/node": "^22",
+    "eslint": "^10.11.0",
+    "typescript": "~6",
+    "vitest": "^5.0.2"
+  }
+}

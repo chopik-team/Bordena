@@ -1,0 +1,47 @@
+import fs from 'node:fs';
+import path from 'node:path';
+import {spawnSync} from 'node:child_process';
+import {createHash} from 'node:crypto';
+import {fileURLToPath} from 'node:url';
+import {displayVersion} from '../../packages/utils/src/versions.ts';
+const root=fileURLToPath(new URL('../../',import.meta.url));
+const options=Object.fromEntries(process.argv.slice(2).map(a=>{const [key,...rest]=a.replace(/^--/,'').split('=');return [key,rest.join('=')||true]}));
+const version=options.version??JSON.parse(fs.readFileSync(path.join(root,'package.json'),'utf8')).version;
+if(!/^\d+\.\d+\.\d+$/.test(version))throw Error('Machine SemVer required');
+const staging=options.staging===true;
+if(!staging&&version!==JSON.parse(fs.readFileSync(path.join(root,'package.json'),'utf8')).version)throw Error('Production package must match source version');
+const label=displayVersion(version), basename=`Bordena-${label.replace(' ','')}-Windows-x64`;
+const output=path.resolve(root,options.output??`artifacts/${basename}`);
+if(!output.toLowerCase().startsWith(path.join(root,staging?'.tools':'artifacts').toLowerCase()+path.sep))throw Error('Unexpected package directory');
+fs.mkdirSync(output,{recursive:true});
+const target=path.resolve(root,options.target??'apps/desktop/src-tauri/target/release');
+const installer=path.resolve(root,options.installer??path.join(target,`bundle/nsis/Bordena_${version}_x64-setup.exe`));
+const appBytes=fs.readFileSync(path.join(target,'bordena.exe'));
+const peOffset=appBytes.readUInt32LE(60);
+if(appBytes.subarray(0,2).toString()!=='MZ'||appBytes.subarray(peOffset,peOffset+4).toString()!=='PE\0\0'||appBytes.readUInt16LE(peOffset+4)!==0x8664)throw Error('Bordena application must be Windows x64 PE');
+const properties=spawnSync('powershell.exe',['-NoProfile','-Command',
+  '[Console]::OutputEncoding=[Text.UTF8Encoding]::new($false);$a=[Diagnostics.FileVersionInfo]::GetVersionInfo($env:BORDENA_PACKAGE_EXE);$b=[Diagnostics.FileVersionInfo]::GetVersionInfo($env:BORDENA_PACKAGE_INSTALLER);@{app_version=$a.FileVersion;app_product=$a.ProductName;installer_version=$b.FileVersion;installer_product=$b.ProductName}|ConvertTo-Json -Compress'],
+  {encoding:'utf8',windowsHide:true,env:{...process.env,BORDENA_PACKAGE_EXE:path.join(target,'bordena.exe'),BORDENA_PACKAGE_INSTALLER:installer}});
+if(properties.status!==0)throw Error('Cannot inspect Windows package metadata');
+const metadata=JSON.parse(properties.stdout);
+for(const field of ['app_version','installer_version'])if(![version,version+'.0'].includes(metadata[field]))throw Error(`Windows ${field} differs from requested machine version`);
+if(!staging&&(metadata.app_product!=='Bordena'||metadata.installer_product!=='Bordena'))throw Error('QA/foreign executable cannot enter a production package');
+const setup=path.join(output,`${basename}-Setup.exe`);
+const copy=(source,dest)=>{fs.copyFileSync(source,dest);if(hash(source)!==hash(dest))throw Error('Copy readback differs')};
+const hash=file=>createHash('sha256').update(fs.readFileSync(file)).digest('hex');
+copy(installer,setup);copy(path.join(target,'bordena.exe'),path.join(output,'Bordena.exe'));
+for(const file of ['LICENSE','NOTICE.md','docs/THIRD_PARTY_NOTICES.txt','docs/RUST_THIRD_PARTY_NOTICES.txt'])copy(path.join(root,file),path.join(output,path.basename(file)));
+fs.cpSync(path.join(root,'docs/licenses/mpl-sources'),path.join(output,'mpl-sources'),{recursive:true});
+const sign=file=>{const r=spawnSync('powershell.exe',['-NoProfile','-ExecutionPolicy','Bypass','-File',path.join(root,'scripts/release/sign.ps1'),'-File',file,'-Version',version],{stdio:'inherit',windowsHide:true});if(r.status!==0)throw Error('Signing failed')};
+sign(setup);
+const notes=staging?'Isolated staging package; never publish as Stable.':`Bordena ${label} release candidate: AW/W version history, quick-add columns, NSIS installation and authenticated Launcher delivery. Local projects and profile identity preserved. Public release is pending the mandatory clean-Windows checks.`;
+const payload={schema_version:1,product_id:'team.chopik.bordena',channel:'stable',platform:'windows-x86_64',version,display_version:label,
+  url:`https://github.com/chopik-team/Bordena/releases/download/v${version}/${path.basename(setup)}`,size:fs.statSync(setup).size,sha256:hash(setup),installer_signature:fs.readFileSync(setup+'.sig','utf8').trim(),notes};
+const payloadFile=path.join(output,'bordena-release.payload.json');fs.writeFileSync(payloadFile,JSON.stringify(payload,null,2));sign(payloadFile);
+fs.writeFileSync(path.join(output,'bordena-release.json'),JSON.stringify({payload:fs.readFileSync(payloadFile,'utf8'),signature:fs.readFileSync(payloadFile+'.sig','utf8').trim()},null,2));
+copy(path.join(root,'integrations/chopik-launcher/trust/bordena.pub'),path.join(output,'bordena.pub'));
+fs.writeFileSync(path.join(output,'VERSION.json'),JSON.stringify({version,display_version:label,channel:staging?'staging':'stable',staging,identifier:staging?'team.chopik.bordena.release-qa':'team.chopik.bordena',windows:metadata,authenticode:'UNSIGNED',installer_signature:'minisign; pinned CHOPIK release key',publication:'NOT_PUBLISHED',built_at:new Date().toISOString()},null,2));
+fs.writeFileSync(path.join(output,'RELEASE_NOTES.md'),`# Bordena ${label}${staging?' — STAGING':''}\n\n${notes}\n\nPublisher: CHOPIK Team / Stanislav Smirnov. Original Doska: Margarita Romenkova, MIT. Windows Authenticode certificate is not configured; cryptographic package signature is separate.\n`);
+const files=[];function walk(dir){for(const e of fs.readdirSync(dir,{withFileTypes:true})){const p=path.join(dir,e.name);if(e.isDirectory())walk(p);else if(e.name!=='SHA256SUMS.txt')files.push(p)}}walk(output);
+fs.writeFileSync(path.join(output,'SHA256SUMS.txt'),files.sort().map(p=>`${hash(p)}  ${path.relative(output,p).replaceAll('\\','/')}`).join('\n')+'\n');
+console.log(JSON.stringify({output,version,staging,installer_sha256:hash(setup),files:files.length}));

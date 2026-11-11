@@ -1,0 +1,66 @@
+import type { ThemeTokens } from "./types"
+
+export type { ThemeTokens } from "./types"
+
+export const LIGHT: ThemeTokens = {
+  background: "#f7f7fa",
+  foreground: "#343c54",
+  card: "#ffffff",
+  cardForeground: "#343c54",
+  popover: "#ffffff",
+  popoverForeground: "#343c54",
+  primary: "#725cff",
+  primaryForeground: "#ffffff",
+  secondary: "#eeeff2",
+  secondaryForeground: "#343c54",
+  muted: "#f1f2f7",
+  mutedForeground: "#606a85",
+  accent: "#f4f2ff",
+  accentForeground: "#725cff",
+  destructive: "#ff5656",
+  success: "#e3f4f0",
+  successForeground: "#308f77",
+  border: "#e8e9ed",
+  input: "#e8e9ed",
+  ring: "#725cff",
+  sidebar: "#ffffff",
+  sidebarForeground: "#343c54",
+  sidebarPrimary: "#725cff",
+  sidebarPrimaryForeground: "#ffffff",
+  sidebarAccent: "#f4f2ff",
+  sidebarAccentForeground: "#725cff",
+  sidebarBorder: "#eeeff2",
+}
+
+export const DARK: ThemeTokens = {
+  background: "#232939",
+  foreground: "#f7f7f8",
+  card: "#282e3f",
+  cardForeground: "#f7f7f8",
+  popover: "#2d3447",
+  popoverForeground: "#f7f7f8",
+  primary: "#9585ff",
+  primaryForeground: "#f7f7f8",
+  secondary: "#343c54",
+  secondaryForeground: "#f7f7f8",
+  muted: "#343c54",
+  mutedForeground: "#9299b0",
+  accent: "#343c54",
+  accentForeground: "#f7f7f8",
+  destructive: "#ff5656",
+  success: "#308f77",
+  successForeground: "#f7f7f8",
+  border: "#ffffff14",
+  input: "#ffffff1f",
+  ring: "#9585ff",
+  sidebar: "#1d2230",
+  sidebarForeground: "#f7f7f8",
+  sidebarPrimary: "#9585ff",
+  sidebarPrimaryForeground: "#232939",
+  sidebarAccent: "#343c54",
+  sidebarAccentForeground: "#f7f7f8",
+  sidebarBorder: "#ffffff1f",
+}
+export * from "./columns"
+export * from "./deadline"
+export * from "./priority"

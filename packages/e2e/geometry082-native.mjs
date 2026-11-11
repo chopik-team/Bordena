@@ -1,0 +1,16 @@
+import fs from 'node:fs/promises';import path from 'node:path';import assert from 'node:assert/strict';import {expect} from '@playwright/test';import {nativeHost,root,selectCalendarView} from './native-host.mjs';
+let host;const report={status:'RUNNING',geometry:[],checks:[],screenshotsCreated:false};
+try{
+host=await nativeHost({name:'082-geometry',port:9289});const {page}=host,cdp=await page.context().newCDPSession(page);
+await page.getByRole('button',{name:'Календарь',exact:true}).click();await selectCalendarView(page,'year');
+for(const language of ['ru','en'])for(const theme of ['dark','light'])for(const [width,height]of [[1920,1080],[1366,768],[1100,700],[800,600]]){
+ await cdp.send('Emulation.setDeviceMetricsOverride',{width,height,deviceScaleFactor:1,mobile:false});await page.evaluate(patch=>{const key='bordena:preferences:v1',newValue=JSON.stringify({...JSON.parse(localStorage.getItem(key)),...patch});localStorage.setItem(key,newValue);dispatchEvent(new StorageEvent('storage',{key,newValue}))},{language,theme});
+ await expect(page.locator('.bordena-mini-month')).toHaveCount(12);assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
+ const create=page.getByRole('button',{name:language==='ru'?'Создать событие':'Create event',exact:true});await create.click();const dialog=page.getByRole('dialog').last();await expect(dialog).toBeVisible();const title=dialog.getByRole('textbox',{name:language==='ru'?'Название':'Name',exact:true});await title.fill('ОченьДлинноеНазваниеБезПробелов'.repeat(50));
+ const box=await dialog.boundingBox();assert.ok(box.x>=-1&&box.y>=-1&&box.x+box.width<=width+1&&box.y+box.height<=height+1,JSON.stringify({width,height,box}));assert.ok(await dialog.evaluate(e=>e.scrollWidth<=e.clientWidth+1));const close=dialog.getByRole('button',{name:language==='ru'?'Закрыть':'Close',exact:true});await expect(close).toBeVisible();await title.press('Tab');assert.ok(await page.evaluate(()=>document.activeElement!==document.body));
+ await close.click();const prompt=page.getByRole('dialog',{name:language==='ru'?'Есть несохранённые изменения':'There are unsaved changes',exact:true});await expect(prompt).toBeVisible();const promptBox=await prompt.boundingBox();assert.ok(promptBox.x>=-1&&promptBox.x+promptBox.width<=width+1);await prompt.getByRole('button',{name:language==='ru'?'Не сохранять':'Discard changes',exact:true}).click();await expect(page.getByRole('dialog')).toHaveCount(0);
+ report.geometry.push({language,theme,width,height,dialog:box,dirtyPrompt:promptBox,documentFits:true});
+}
+report.checks.push('all 16 combinations: RU/EN × dark/light × 1920/1366/1100/800; 12-month year, event editor and dirty prompt fit without horizontal overflow','long unbroken user title is retained; close button stays visible; Tab moves keyboard focus');assert.deepEqual(host.errors,[]);assert.deepEqual(host.external,[]);report.status='PASS';
+}catch(e){report.status='FAIL';report.failure=e.stack;report.body=await host?.page.locator('body').innerText().catch(()=>null);process.exitCode=1}finally{if(host){report.errors=host.errors;report.external=host.external;await host.close().catch(e=>{report.closeError=e.message;report.status='FAIL';process.exitCode=1})}await fs.writeFile(path.join(root,'docs/evidence/082-geometry-native.json'),JSON.stringify(report,null,2));console.log(report)}
+

@@ -1,0 +1,21 @@
+import type { Card, Column } from "@bordena/contract"
+
+export type {
+  Attachment,
+  Card,
+  Column,
+  Dashboard,
+  HistoryEntry,
+  Member,
+  SidebarItem,
+  SidebarLayout,
+} from "@bordena/contract"
+
+/** A board assembled for the UI: its columns and the cards that live in them. */
+export type Board = {
+  columns: Column[]
+  cards: Card[]
+}
+
+/** How a board renders: its columns, or every card as one date-grouped list. */
+export type DashboardView = "board" | "rows" | "table" | "goal"

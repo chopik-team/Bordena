@@ -1,0 +1,41 @@
+{
+  "name": "bordena",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "engines": {
+    "node": ">=22",
+    "pnpm": ">=11"
+  },
+  "packageManager": "pnpm@11.25.0",
+  "scripts": {
+    "check:version": "node scripts/check-version.mjs",
+    "dev": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/dev-desktop.ps1",
+    "build": "pnpm --filter client build",
+    "desktop": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/dev-desktop.ps1",
+    "lint": "turbo run lint",
+    "type-check": "turbo run typecheck",
+    "test": "turbo run test --filter=!desktop",
+    "format": "turbo run format",
+    "e2e": "pnpm --filter @bordena/e2e e2e",
+    "build:windows": "pnpm --filter desktop build --bundles nsis",
+    "test:native": "pnpm e2e",
+    "test:embedded": "pnpm e2e",
+    "test:major": "pnpm --filter @bordena/e2e exec node native-major.mjs",
+    "check-env": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/check-environment.ps1",
+    "docs:guide": "node scripts/export-guide.mjs",
+    "test:roundtrip": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/qa-roundtrip.ps1",
+    "test:launcher": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/qa-launcher.ps1",
+    "test:features": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/qa-aw005.ps1 -Mode native",
+    "docs:schema": "node scripts/export-changeset-schema.mjs",
+    "check:i18n": "node scripts/check-system-translations.mjs",
+    "test:planning:embedded": "pnpm --filter @bordena/e2e exec node aw005-embedded.mjs",
+    "test:calendar": "pnpm --filter @bordena/e2e exec node aw006-calendar.mjs && pnpm --filter @bordena/e2e exec node aw006-integration.mjs && pnpm --filter @bordena/e2e exec node aw006-dst.mjs",
+    "test:calendar:ux": "pnpm --filter @bordena/e2e exec node aw006-ux.mjs"
+  },
+  "devDependencies": {
+    "prettier": "^3.9.9",
+    "turbo": "^2.11.5"
+  },
+  "author": "Станислав Смирнов (CHOPIK Team)"
+}

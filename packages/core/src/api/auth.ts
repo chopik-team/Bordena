@@ -1,0 +1,110 @@
+import { ORPCError } from "@orpc/client"
+import { runtime } from "../runtime"
+import { authClient } from "./auth-client"
+import { isSyncConfigured, setServerUrl } from "./server"
+
+export type Session = {
+  authed: boolean
+  login: string | null
+  userId: string | null
+  /** A file key from `/api/files`, or an absolute URL an SSO provider gave us. */
+  image: string | null
+  isAdmin: boolean
+}
+
+const expiryListeners = new Set<() => void>()
+
+// Survives sign-out on purpose: only a device that never tried skips the server.
+const SIGNED_IN_KEY = "bordena:signed-in"
+
+/** Call before any sign-in starts: web sign-in reloads the page before a session can be read. */
+export function markSignedIn(): void {
+  runtime().kv.set(SIGNED_IN_KEY, "1")
+}
+
+function hasSignedIn(): boolean {
+  return runtime().kv.get(SIGNED_IN_KEY) !== null
+}
+
+/** Fires when the server rejects a request as unauthenticated, so the app can
+ * flip to signed-out from one place rather than at every call site. */
+export function onSessionExpired(listener: () => void): () => void {
+  expiryListeners.add(listener)
+  return () => {
+    expiryListeners.delete(listener)
+  }
+}
+
+export function sessionExpired(): void {
+  for (const listener of expiryListeners) listener()
+}
+
+export function isUnauthorized(error: unknown): boolean {
+  return error instanceof ORPCError && error.status === 401
+}
+
+export const SIGNED_OUT: Session = {
+  authed: false,
+  login: null,
+  userId: null,
+  image: null,
+  isAdmin: false,
+}
+
+export async function fetchSession(): Promise<Session> {
+  if (!isSyncConfigured() || !hasSignedIn()) return SIGNED_OUT
+
+  const { data, error } = await authClient().getSession()
+  if (error) {
+    if (error.status === 401 || error.status === 403) return SIGNED_OUT
+    throw new Error(error.message ?? "Could not reach the server")
+  }
+  if (!data) return SIGNED_OUT
+  return toSession(data.user)
+}
+
+function toSession(user: {
+  id: string
+  username?: string | null
+  image?: string | null
+  role?: string | null
+}): Session {
+  return {
+    authed: true,
+    login: user.username ?? null,
+    userId: user.id,
+    image: user.image ?? null,
+    isAdmin: user.role === "admin",
+  }
+}
+
+/** The first account is seeded with a login, not an email — hence `username`.
+ * Returns the session it opened, so the caller doesn't re-fetch to learn the
+ * role it just signed in with. */
+export async function login(login: string, password: string): Promise<Session> {
+  markSignedIn()
+  const { data, error } = await authClient().signIn.username({
+    username: login,
+    password,
+  })
+  if (error || !data) throw new Error(error?.message ?? "Invalid credentials")
+  return toSession(data.user)
+}
+
+/** Signs in with the token a desktop browser sign-in ended with. */
+export async function loginWithToken(token: string): Promise<Session> {
+  markSignedIn()
+  runtime().auth.capture(token)
+  const session = await fetchSession()
+  if (!session.authed) {
+    runtime().auth.clear()
+    throw new Error("The server did not accept the sign-in")
+  }
+  return session
+}
+
+export async function logout(): Promise<void> {
+  await authClient().signOut()
+  runtime().auth.clear()
+  setServerUrl("")
+}

@@ -1,0 +1,41 @@
+{
+  "name": "@bordena/ui-kit",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@base-ui/react": "1.8.0",
+    "@bordena/markdown": "workspace:*",
+    "@bordena/tokens": "workspace:*",
+    "@bordena/utils": "workspace:*",
+    "class-variance-authority": "0.7.1",
+    "clsx": "2.1.1",
+    "date-fns": "^4.4.0",
+    "lucide-react": "1.48.0",
+    "motion": "^13.4.6",
+    "react-day-picker": "^10.0.1",
+    "tailwind-merge": "3.7.0",
+    "@bordena/i18n": "workspace:*"
+  },
+  "peerDependencies": {
+    "react": "^19",
+    "react-dom": "^19"
+  },
+  "devDependencies": {
+    "@bordena/configs": "workspace:*",
+    "@types/react": "~19.2.18",
+    "@types/react-dom": "~19.2.5",
+    "eslint": "^10.11.0",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8",
+    "typescript": "~6"
+  }
+}

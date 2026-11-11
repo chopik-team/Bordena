@@ -1,0 +1,31 @@
+{
+  "name": "@bordena/markdown",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./core": "./src/core.ts"
+  },
+  "scripts": {
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "remark-gfm": "4.0.1",
+    "remark-mark-highlight": "0.1.1",
+    "remark-parse": "^11.0.0",
+    "unified": "^11.0.5"
+  },
+  "peerDependencies": {
+    "react": "^19"
+  },
+  "devDependencies": {
+    "@bordena/configs": "workspace:*",
+    "@types/mdast": "^4.0.4",
+    "@types/react": "~19.2.18",
+    "eslint": "^10.11.0",
+    "react": "^19.2.8",
+    "typescript": "~6"
+  }
+}

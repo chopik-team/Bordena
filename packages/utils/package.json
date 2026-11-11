@@ -1,0 +1,23 @@
+{
+  "name": "@bordena/utils",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@bordena/configs": "workspace:*",
+    "@types/node": "^22",
+    "eslint": "^10.11.0",
+    "typescript": "~6"
+  },
+  "dependencies": {
+    "@bordena/i18n": "workspace:*"
+  }
+}

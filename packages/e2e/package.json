@@ -1,0 +1,17 @@
+{
+  "name": "@bordena/e2e",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "e2e": "node native-major.mjs && node aw003-sections.mjs && node aw003-organization.mjs && node aw003-settings.mjs && node aw005-navigation.mjs",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@bordena/configs": "workspace:*",
+    "@bordena/contract": "workspace:*",
+    "@playwright/test": "1.63.0",
+    "@types/node": "^22",
+    "typescript": "~6"
+  }
+}

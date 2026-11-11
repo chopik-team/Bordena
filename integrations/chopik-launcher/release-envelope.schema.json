@@ -1,0 +1,11 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Bordena signed release envelope",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["payload", "signature"],
+  "properties": {
+    "payload": {"type": "string", "maxLength": 200000, "description": "Exact UTF-8 release payload JSON. Verify signature before using any field."},
+    "signature": {"type": "string", "minLength": 10, "maxLength": 8192, "description": "Tauri/Minisign encoded signature with authenticated machine version."}
+  }
+}

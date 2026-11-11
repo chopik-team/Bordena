@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Authenticated Bordena release payload",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version","product_id","channel","platform","version","display_version","url","size","sha256","installer_signature","notes"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "product_id": {"const": "team.chopik.bordena"},
+    "channel": {"const": "stable"},
+    "platform": {"const": "windows-x86_64"},
+    "version": {"type": "string", "pattern": "^[1-9][0-9]*\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$"},
+    "display_version": {"type": "string", "maxLength": 64},
+    "url": {"type": "string", "pattern": "^https://github\\.com/chopik-team/Bordena/releases/download/v[0-9.]+/Bordena-[A-Za-z0-9.]+-Windows-x64-Setup\\.exe$"},
+    "size": {"type": "integer", "minimum": 1, "maximum": 536870912},
+    "sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+    "installer_signature": {"type": "string", "minLength": 10, "maxLength": 8192},
+    "notes": {"type": "string", "maxLength": 16384}
+  }
+}

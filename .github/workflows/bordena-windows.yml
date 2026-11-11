@@ -1,0 +1,67 @@
+name: Bordena Windows validation and packaging
+on:
+  workflow_dispatch:
+    inputs:
+      sign_artifacts:
+        description: Sign a candidate with the protected release key (does not publish)
+        required: false
+        default: false
+        type: boolean
+  pull_request:
+  push:
+    branches: [main]
+    tags: ['v*']
+permissions:
+  contents: read
+jobs:
+  windows:
+    runs-on: windows-2022
+    env:
+      NO_UPDATE_NOTIFIER: '1'
+      PNPM_DISABLE_SELF_UPDATE_CHECK: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.25.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24.19.0
+          cache: pnpm
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: 1.99.1
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm check:version
+      - run: pnpm check:i18n
+      - run: pnpm type-check
+      - run: pnpm lint
+      - run: pnpm test
+      - run: cargo test --locked --manifest-path apps/desktop/src-tauri/Cargo.toml
+      - run: powershell -NoProfile -ExecutionPolicy Bypass -File scripts/collect-rust-licenses.ps1
+      - run: pnpm build:windows
+      - name: Prepare signed release candidate
+        if: github.event_name == 'workflow_dispatch' && inputs.sign_artifacts
+        shell: pwsh
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.BORDENA_RELEASE_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.BORDENA_RELEASE_KEY_PASSWORD }}
+        run: |
+          if (-not $env:TAURI_SIGNING_PRIVATE_KEY) { throw 'Protected release signing key is not configured' }
+          node scripts/release/package.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $machine = (Get-Content package.json -Raw | ConvertFrom-Json).version
+          $candidate = Get-ChildItem artifacts/Bordena-W*-Windows-x64 -Directory | Select-Object -First 1
+          $setup = Get-ChildItem $candidate.FullName -Filter '*-Setup.exe' | Select-Object -First 1
+          cargo run --locked --manifest-path tools/release-verify/Cargo.toml -- "$($candidate.FullName)/bordena-release.json" $setup.FullName $machine
+          exit $LASTEXITCODE
+      - uses: actions/upload-artifact@v4
+        with:
+          name: bordena-windows-candidate
+          path: |
+            apps/desktop/src-tauri/target/release/bordena.exe
+            apps/desktop/src-tauri/target/release/licenses/**
+            apps/desktop/src-tauri/target/release/bundle/nsis/*-setup.exe
+            artifacts/Bordena-W*-Windows-x64/**
+      # Publishing is separate: clean Windows 10/11 and signed delivery QA must pass.
+      # No write permission, tag creation or automatic release promotion in this workflow.

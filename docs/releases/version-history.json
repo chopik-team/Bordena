@@ -1,0 +1,57 @@
+[
+  {
+    "machineVersion": "0.8.2",
+    "displayVersion": "AW 0.82",
+    "previousHeading": "0.8.2 — 2026-11-10\r"
+  },
+  {
+    "machineVersion": "0.8.1",
+    "displayVersion": "AW 0.81",
+    "previousHeading": "0.8.1 — 2026-10-27"
+  },
+  {
+    "machineVersion": "0.8.0",
+    "displayVersion": "AW 0.8",
+    "previousHeading": "0.8 — UX Restructure & Smart Planning\r"
+  },
+  {
+    "machineVersion": "0.7.1",
+    "displayVersion": "AW 0.71",
+    "previousHeading": "0.7.1 — Visual Fidelity\r"
+  },
+  {
+    "machineVersion": "0.7.0",
+    "displayVersion": "AW 0.7",
+    "previousHeading": "0.7 — UX Redesign & Focus\r"
+  },
+  {
+    "machineVersion": "0.6.0",
+    "displayVersion": "AW 0.6",
+    "previousHeading": "0.6 — Bordena Calendar\r"
+  },
+  {
+    "machineVersion": "0.5.0",
+    "displayVersion": "AW 0.5",
+    "previousHeading": "0.5 — Путь к цели и локальная автоматизация\r"
+  },
+  {
+    "machineVersion": "0.4.0",
+    "displayVersion": "AW 0.4",
+    "previousHeading": "0.4 — связанные проекты, JSON-команды и календарь\r"
+  },
+  {
+    "machineVersion": "0.3.0",
+    "displayVersion": "AW 0.3",
+    "previousHeading": "0.3 — секции и рабочие пространства\r"
+  },
+  {
+    "machineVersion": "0.2.0",
+    "displayVersion": "AW 0.2",
+    "previousHeading": "0.2 — навигация и компоновки\r"
+  },
+  {
+    "machineVersion": "0.1.0",
+    "displayVersion": "AW 0.1",
+    "previousHeading": "0.1 — в разработке\r"
+  }
+]

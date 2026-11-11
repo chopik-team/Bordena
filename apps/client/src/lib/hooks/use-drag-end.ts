@@ -1,0 +1,83 @@
+import type { DropResult } from "@hello-pangea/dnd"
+import {
+  type Board,
+  type Card,
+  byPosition,
+  dropNeighbours,
+  filterByTags,
+  filterByUsers,
+  keyBetween,
+  sortCards,
+  type ProgressReader,
+} from "@bordena/core"
+
+/**
+ * Builds the drop handler for the board: translates a drag result into the
+ * single moved card with a freshly minted fractional position, then persists it.
+ */
+export function useDragEnd(
+  board: Board | undefined,
+  moveCard: (changed: Card[]) => void,
+  sort: string[],
+  tagFilters: string[] = [],
+  userFilters: string[] = [],
+  progressOf?: ProgressReader,
+  progressModeOf?: (columnId: string) => "off" | "manual" | "position"
+) {
+  return function handleDragEnd({
+    source,
+    destination,
+    draggableId,
+  }: DropResult) {
+    if (!destination || !board) return
+    if (
+      source.droppableId === destination.droppableId &&
+      source.index === destination.index
+    )
+      return
+
+    const moved = board.cards.find((c) => c.id === draggableId)
+    if (!moved) return
+    const progressMode = progressModeOf?.(destination.droppableId)
+    const activeSort =
+      progressMode && progressMode !== "manual"
+        ? sort.filter((key) => key !== "progress")
+        : sort
+    const dropProgress =
+      progressMode === "manual"
+        ? (card: Card) => card.progress ?? null
+        : progressOf
+
+    const column = board.cards
+      .filter(
+        (c) => c.columnId === destination.droppableId && c.id !== moved.id
+      )
+      .sort(byPosition)
+
+    // The destination column as rendered, minus the card being dropped, so the
+    // insertion index lines up with the neighbors at the drop site.
+    const destCards = sortCards(
+      filterByUsers(filterByTags(column, tagFilters), userFilters),
+      activeSort,
+      dropProgress
+    )
+
+    let [prev, next] = dropNeighbours(
+      destCards,
+      destination.index,
+      moved,
+      activeSort,
+      dropProgress
+    )
+
+    if (tagFilters.length > 0 || userFilters.length > 0) {
+      if (prev) next = column[column.indexOf(prev) + 1]
+      else if (next) prev = column[column.indexOf(next) - 1]
+    }
+
+    const position = keyBetween(prev, next)
+    if (position === null) return
+
+    moveCard([{ ...moved, columnId: destination.droppableId, position }])
+  }
+}

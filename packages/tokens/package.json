@@ -1,0 +1,25 @@
+{
+  "name": "@bordena/tokens",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "sideEffects": [
+    "*.css"
+  ],
+  "exports": {
+    ".": "./src/index.ts",
+    "./tokens.css": "./tokens.css",
+    "./theme.css": "./theme.css",
+    "./tailwind-colors.cjs": "./tailwind-colors.cjs"
+  },
+  "scripts": {
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@bordena/configs": "workspace:*",
+    "@types/node": "^22",
+    "eslint": "^10.11.0",
+    "typescript": "~6"
+  }
+}

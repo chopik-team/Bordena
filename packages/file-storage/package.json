@@ -1,0 +1,22 @@
+{
+  "name": "@bordena/file-storage",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./server": "./src/server/index.ts"
+  },
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.1142.0"
+  },
+  "devDependencies": {
+    "@bordena/configs": "workspace:*",
+    "@types/node": "^22",
+    "vitest": "^5.0.2"
+  },
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest"
+  }
+}

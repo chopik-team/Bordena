@@ -1,0 +1,72 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+node_modules
+dist
+dist-ssr
+*.local
+.vite
+*.tsbuildinfo
+.turbo
+
+# Env files (secrets); keep .env.example tracked
+.env
+!.env.example
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+.zed
+
+
+# Playwright
+test-results
+playwright-report
+playwright/.cache
+
+# Tauri
+# Rust build output / generated capability schemas (also covered locally in
+# apps/desktop/src-tauri/.gitignore; kept here as a safety net).
+apps/desktop/src-tauri/target
+apps/desktop/src-tauri/gen/schemas
+# Tauri updater signing keys — the private key must NEVER be committed (it lives
+# in CI secrets). The .pub is public, but ignore both to be safe.
+*.key
+*.key.pub
+
+.claude
+plan
+
+.selfhost-prev-compose.yml
+
+/board
+
+# Local toolchain and private development profiles
+/.tools/
+/artifacts/
+!/docs/evidence/*.log
+# Release secrets, system dumps and local QA material
+.env.*
+!.env.example
+*.dpapi
+*.pfx
+*.p12
+*.pem
+*.dmp
+Thumbs.db
+Desktop.ini
+__pycache__/
+tools/release-verify/target/

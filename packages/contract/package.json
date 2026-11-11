@@ -1,0 +1,21 @@
+{
+  "name": "@bordena/contract",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@orpc/contract": "^1.15.4",
+    "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "@bordena/configs": "workspace:*",
+    "@types/node": "^22",
+    "typescript": "~6"
+  }
+}

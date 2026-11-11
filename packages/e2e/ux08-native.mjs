@@ -1,0 +1,85 @@
+import {execFileSync} from "node:child_process";
+import fs from 'node:fs/promises';
+import path from 'node:path';
+import assert from 'node:assert/strict';
+import {expect} from '@playwright/test';
+import {nativeHost,root,selectCalendarView,showCalendarTasks,delay} from './native-host.mjs';
+const report={status:'RUNNING',checks:[],geometry:[],screenshotsCreated:false};let host;
+const check=s=>{report.checks.push(s);console.log('PASS:',s)};
+try {
+ host=await nativeHost({name:'08-ux',port:9261});const {page,rows}=host;report.profile=host.profile;
+ const cdp=await page.context().newCDPSession(page);
+ const size=(width,height)=>cdp.send('Emulation.setDeviceMetricsOverride',{width,height,deviceScaleFactor:1,mobile:false});
+ const go=route=>page.evaluate(route=>{history.pushState(null,'',route);dispatchEvent(new PopStateEvent('popstate'))},route);
+ const preferences=patch=>page.evaluate(patch=>{const key='bordena:preferences:v1',value=JSON.stringify({...JSON.parse(localStorage.getItem(key)??'{}'),...patch});localStorage.setItem(key,value);dispatchEvent(new StorageEvent('storage',{key,newValue:value}))},patch);
+ const aggregate=async()=> (await rows('meta')).find(v=>v?.schemaVersion===1&&Array.isArray(v?.calendars));
+ const undo=async()=>{await page.locator('header').last().click({position:{x:400,y:10}});await page.keyboard.press('Control+z');await delay(250)};
+ await size(1920,1080);await preferences({theme:'dark',language:'ru'});
+ await expect(page.getByRole('tablist')).toHaveCount(0);
+ assert.equal(await page.evaluate(()=>window.__TAURI_INTERNALS__.invoke('plugin:app|version')),'0.8.0');
+ await page.getByRole('button',{name:'Создать доску или календарь',exact:true}).click();await page.getByRole('menuitem',{name:'Новая доска',exact:true}).click();
+ await page.getByRole('dialog').getByRole('textbox',{name:'Название',exact:true}).fill('Bordena 0.8 — проверка');await page.getByRole('dialog').getByRole('button',{name:'Создать доску',exact:true}).click();await page.waitForURL(/\/d\/board-/);
+ const id=new URL(page.url()).pathname.split('/')[2];report.boardId=id;
+ const original=(await rows('dashboards')).find(b=>b.id===id);const laneId=original.layout.lanes[0].id;
+ await expect(page.getByRole('tablist')).toHaveCount(0);await expect(page.locator('.bordena-add-section')).toHaveCount(0);
+ assert.equal(await page.locator('.bordena-lane').first().evaluate(e=>getComputedStyle(e).backgroundColor),'rgba(0, 0, 0, 0)');
+ const lane=page.locator(`[data-layout-lane="${laneId}"]`), name=lane.getByRole('button',{name:'Название столбца',exact:true});
+ await name.dblclick();await lane.getByRole('textbox',{name:'Название столбца',exact:true}).fill('Отменённое');await page.keyboard.press('Escape');
+ assert.equal((await rows('dashboards')).find(b=>b.id===id).layout.lanes[0].title,original.layout.lanes[0].title);
+ await name.dblclick();const input=lane.getByRole('textbox',{name:'Название столбца',exact:true});await input.fill('');await input.press('Enter');await expect(input).toHaveAttribute('aria-invalid','true');await input.fill('Производство');await input.press('Enter');
+ await expect.poll(async()=>(await rows('dashboards')).find(b=>b.id===id).layout.lanes[0].title).toBe('Производство');
+ await undo();await expect.poll(async()=>(await rows('dashboards')).find(b=>b.id===id).layout.lanes[0].title).toBe(original.layout.lanes[0].title);
+ check('tabs off by default; real native 0.8.0; neutral empty lanes; inline rename/empty validation/Esc/Enter/Undo');
+ const columns=(await rows('columns')).filter(c=>c.dashboardId===id&&!c.deletedAt),sample=(await rows('cards'))[0];
+ const sectionTitles=columns.map(c=>c.title);
+ await page.evaluate(async({columns,sample})=>{const r=indexedDB.open('bordena'),db=await new Promise(ok=>r.onsuccess=()=>ok(r.result));await new Promise((ok,no)=>{const tx=db.transaction(['cards','columns'],'readwrite');tx.oncomplete=ok;tx.onerror=()=>no(tx.error);columns.forEach((c,i)=>tx.objectStore('columns').put({...c,color:['blue','violet','green'][i%3]},c.id));for(let i=0;i<12;i++){let key='qa08-card-'+i;tx.objectStore('cards').put({...sample,id:key,columnId:columns[i===11?1:0].id,title:'08 Карточка '+i,body:'## Важная заметка\n- [ ] Сохранить Markdown\n[Связь](https://example.invalid)',position:'a'+String.fromCharCode(65+i),color:'violet',priority:'high',progress:37,deadline:'2026-10-30',attachments:[],archived:false,deletedAt:null,updatedAt:Date.now()},key)}});db.close()}, {columns,sample});await page.reload();
+ await expect(page.locator('.bordena-card')).toHaveCount(12);assert.deepEqual((await rows('columns')).filter(c=>columns.some(a=>a.id===c.id)).map(c=>c.title),sectionTitles);
+ const chooseBoard=async(value,label)=>{const combo=page.getByRole('combobox',{name:'Представление доски',exact:true});if(await combo.isVisible())await combo.selectOption(value);else await page.getByRole('group',{name:'Представление доски',exact:true}).getByRole('button',{name:label,exact:true}).click()};
+ for(const [v,label] of [['matrix','Матрица'],['table','Таблица'],['goal','Путь к цели'],['free','Свободная']]){await chooseBoard(v,label);if(v==='matrix'||v==='free')await expect.poll(async()=>(await rows('dashboards')).find(b=>b.id===id).layout.mode).toBe(v);if(v==='table')await expect(page.getByRole('table')).toBeVisible();else if(v==='matrix')await expect(page.locator('[data-matrix]')).toBeVisible();else if(v==='free')await expect(page.locator('[data-layout-lane]')).toHaveCount(3);assert.equal((await rows('cards')).filter(c=>c.id.startsWith('qa08-card-')).length,12)}
+ check('Free, Matrix, Table and Goal Path preserve all twelve source cards');
+ await preferences({useTabs:true});await expect(page.getByRole('tablist')).toBeVisible();const tabs=await page.evaluate(()=>JSON.parse(localStorage.getItem('bordena:navigation:v1')).tabs);await preferences({useTabs:false});await expect(page.getByRole('tablist')).toHaveCount(0);assert.deepEqual(await page.evaluate(()=>JSON.parse(localStorage.getItem('bordena:navigation:v1')).tabs),tabs);
+ await page.getByRole('button',{name:'Действия с доской',exact:true}).click();await page.getByRole('menuitem',{name:'Представление',exact:true}).hover();await page.getByRole('menuitem',{name:'Фокусный режим',exact:true}).click();await expect(page.getByRole('button',{name:'Выйти из фокуса',exact:true})).toBeVisible();await page.getByRole('button',{name:'Выйти из фокуса',exact:true}).click();
+ check('12-card content and section titles preserved; optional tabs retain records; Focus via view menu and explicit exit');
+ await go(`/d/${id}/c/qa08-card-0`);await expect(page.getByRole('button',{name:'Закрыть карточку',exact:true})).toBeVisible();
+ const summary=page.locator('summary').filter({hasText:'Основное и прогресс'});if(!(await summary.evaluate(e=>e.parentElement.open)))await summary.click();
+ const originalCard=(await rows('cards')).find(c=>c.id==='qa08-card-0');
+ await page.getByRole('button',{name:'Запланировать рабочий блок',exact:true}).click();let dialog=page.getByRole('dialog').last();await expect(dialog).toBeVisible();assert.match(page.url(),/\/c\/qa08-card-0/);await dialog.getByRole('button',{name:'Сохранить',exact:true}).click();
+ await expect.poll(async()=>(await aggregate())?.events.filter(e=>e.kind==='block'&&e.links.some(l=>l.id===originalCard.id)).length).toBe(1);
+ let block=(await aggregate()).events.find(e=>e.links.some(l=>l.id===originalCard.id));const blockId=block.id;
+ await page.getByRole('button',{name:/Изменить план/}).first().click();dialog=page.getByRole('dialog').last();await dialog.getByRole('button',{name:/^\d{4}-\d{2}-\d{2}$/}).click();
+ const targetDate=new Date(Date.parse(block.start)+86400000).toLocaleDateString('ru');await page.locator('[data-day="'+targetDate+'"]').click();await dialog.getByRole('button',{name:'Сохранить',exact:true}).click();
+ await expect.poll(async()=>(await aggregate()).events.find(e=>e.id===blockId).start).not.toBe(block.start);const moved=(await aggregate()).events.find(e=>e.id===blockId);assert.equal(Date.parse(moved.end)-Date.parse(moved.start),Date.parse(block.end)-Date.parse(block.start));assert.equal(new Date(moved.start).getHours(),new Date(block.start).getHours());assert.deepEqual(moved.links,block.links);block=moved;
+ await page.getByRole('button',{name:/Изменить план/}).first().click();dialog=page.getByRole('dialog').last();await dialog.getByRole('textbox',{name:'Название',exact:true}).fill('Несохранённое изменение');await dialog.getByRole('button',{name:'Вернуть в незапланированные',exact:true}).click();await expect(dialog.getByText('Есть несохранённые изменения',{exact:true})).toBeVisible();await dialog.getByRole('button',{name:'Вернуться к редактированию',exact:true}).click();await dialog.getByRole('button',{name:'Вернуть в незапланированные',exact:true}).click();await dialog.getByRole('button',{name:'Отменить правки и снять блок',exact:true}).click();
+ await expect.poll(async()=>(await aggregate()).events.find(e=>e.id===blockId).status).toBe('cancelled');assert.equal((await aggregate()).events.find(e=>e.id===blockId).title,block.title);
+ assert.deepEqual((await rows('cards')).find(c=>c.id===originalCard.id),originalCard);
+ await page.getByRole('button',{name:'Закрыть карточку',exact:true}).click();await undo();await expect.poll(async()=>(await aggregate()).events.find(e=>e.id===blockId).status).toBe('planned');
+ check('planning editor stays inside card; block creation; unsaved changes prompt and discard; atomic unschedule/Undo preserve full source card');
+ await go(`/d/${id}/c/qa08-card-1`);const editButton=page.getByRole('button',{name:'Редактировать',exact:true});if(await editButton.isVisible())await editButton.click();const bodyEditor=page.locator('[contenteditable="true"]').last();await expect(bodyEditor).toBeVisible();await bodyEditor.click();await bodyEditor.press('Control+End');const sidebarBefore=await page.locator('[data-slot="sidebar"]').first().getAttribute('data-state');await page.keyboard.press('Control+b');assert.equal(await page.locator('[data-slot="sidebar"]').first().getAttribute('data-state'),sidebarBefore);await page.keyboard.insertText(' Сохранить правку 08');await page.getByRole('button',{name:'Календарь',exact:true}).click();await expect.poll(async()=>(await rows('cards')).find(c=>c.id==='qa08-card-1').body).toContain('Сохранить правку 08');await page.keyboard.press('Alt+ArrowLeft');await page.waitForURL(/\/c\/qa08-card-1/);assert.equal((await rows('cards')).find(c=>c.id==='qa08-card-1').deadline,'2026-10-30');
+ check('Ctrl+B belongs to the text editor; immediate sidebar navigation flushes Markdown; Alt+Left restores the card without tabs');
+ // Isolated recurring and overlap fixtures reuse the saved block schema.
+ await page.getByRole('button',{name:'Календарь',exact:true}).click();await page.evaluate(async block=>{localStorage.setItem('bordena:calendar:view',JSON.stringify({view:'year',date:'2026-10-26',query:'',project:'',status:'all'}));const r=indexedDB.open('bordena'),db=await new Promise(ok=>r.onsuccess=()=>ok(r.result));await new Promise(ok=>{const tx=db.transaction('meta','readwrite');tx.oncomplete=ok;const q=tx.objectStore('meta').get('bordena:calendar');q.onsuccess=()=>{const state=q.result;state.events=[{...block,id:'qa08-a',title:'08 Монтаж',start:'2026-10-26T10:00:00+03:00',end:'2026-10-26T12:00:00+03:00'},{...block,id:'qa08-b',title:'08 Запись',start:'2026-10-26T11:00:00+03:00',end:'2026-10-26T13:00:00+03:00'},{...block,id:'qa08-r',title:'08 Повторение',start:'2026-11-01T10:00:00+03:00',end:'2026-11-01T11:00:00+03:00',recurrence:{frequency:'daily',interval:1,count:2}}];tx.objectStore('meta').put(state,'bordena:calendar')}});db.close()},block);await page.reload();
+ await expect(page.locator('[data-calendar-year]')).toHaveAttribute('data-calendar-year','2026');await expect(page.locator('.bordena-mini-month')).toHaveCount(12);
+ await expect(page.locator('[data-month-stat="10"]')).toHaveAttribute('data-value','3');await page.getByRole('combobox',{name:'Показатель',exact:true}).selectOption('plannedHours');await expect(page.locator('[data-month-stat="10"]')).toHaveAttribute('data-value','4');
+ await page.getByRole('button',{name:'Следующий период',exact:true}).click();await expect(page.locator('[data-calendar-year]')).toHaveAttribute('data-calendar-year','2027');await page.getByRole('button',{name:'Предыдущий период',exact:true}).click();
+ await page.locator('[data-year-day="2026-10-26"]').click();await expect(page.locator('[data-calendar-view]')).toHaveAttribute('data-calendar-view','day');await selectCalendarView(page,'year');await expect(page.locator('[data-calendar-year]')).toHaveAttribute('data-calendar-year','2026');await page.locator('[data-month-stat="11"]').click();await expect(page.locator('[data-calendar-view]')).toHaveAttribute('data-calendar-view','month');
+ check('12 months and correct busy/summed hours; exact year arrows; day/month/year drill-down preserves year context');
+ await page.getByRole('button',{name:/08 Повторение/}).first().dblclick();dialog=page.getByRole('dialog').last();await expect(dialog.getByRole('combobox',{name:'Изменить',exact:true})).toHaveValue('instance');await dialog.getByRole('button',{name:'Снять этот экземпляр с расписания',exact:true}).click();await expect.poll(async()=>Object.hasOwn((await aggregate()).events.find(e=>e.id==='qa08-r').exceptions??{},'2026-11-01')).toBe(true);assert.equal((await aggregate()).events.find(e=>e.id==='qa08-r').status,'planned');assert.equal((await aggregate()).events.find(e=>e.id==='qa08-r').exceptions['2026-11-01'],null);
+ await page.getByRole('button',{name:/08 Повторение/}).first().dblclick();dialog=page.getByRole('dialog').last();await dialog.getByRole('combobox',{name:'Изменить',exact:true}).selectOption('series');await dialog.getByRole('button',{name:'Снять серию с расписания',exact:true}).click();await expect.poll(async()=>(await aggregate()).events.find(e=>e.id==='qa08-r').status).toBe('cancelled');
+ check('recurrence chooses instance or series explicitly; one cancellation leaves series and other occurrences intact');
+ for(const [width,height] of [[1920,1080],[1366,768],[1100,700],[800,600]]){await size(width,height);await selectCalendarView(page,'year');const g=await page.evaluate(()=>({width:innerWidth,documentWidth:document.documentElement.scrollWidth,months:document.querySelectorAll('.bordena-mini-month').length,header:document.querySelector('.bordena-calendar-header').getBoundingClientRect().toJSON()}));assert.ok(g.documentWidth<=width+1,JSON.stringify(g));assert.equal(g.months,12);report.geometry.push(g);}
+ await preferences({language:'en',theme:'light',density:'compact'});await expect(page.getByRole('combobox',{name:'Metric',exact:true})).toBeVisible();await page.reload();await expect(page.locator('[data-calendar-year]')).toBeVisible();await expect(page.getByRole('tablist')).toHaveCount(0);
+ check('year view and controls fit 1920/1366/1100/800; English/light/Compact and persisted year/tabs setting after reload');
+ const windowResult=execFileSync('powershell.exe',['-NoProfile','-Command',`
+ Add-Type -TypeDefinition 'using System; using System.Runtime.InteropServices; public class BordenaQAWindow { [DllImport("user32.dll")] public static extern bool ShowWindow(IntPtr h,int c); [DllImport("user32.dll")] public static extern bool IsZoomed(IntPtr h); [DllImport("user32.dll")] public static extern bool IsIconic(IntPtr h); [DllImport("user32.dll")] public static extern int GetWindowLong(IntPtr h,int n); }';
+ $qaHandle=(Get-Process -Id ${host.pid}).MainWindowHandle;
+ if($qaHandle -eq 0){throw 'No QA window'};
+ [BordenaQAWindow]::ShowWindow($qaHandle,3) | Out-Null; Start-Sleep -Milliseconds 100; $qaMax=[BordenaQAWindow]::IsZoomed($qaHandle);
+ [BordenaQAWindow]::ShowWindow($qaHandle,9) | Out-Null;
+ [BordenaQAWindow]::ShowWindow($qaHandle,6) | Out-Null; Start-Sleep -Milliseconds 100; $qaMin=[BordenaQAWindow]::IsIconic($qaHandle);
+ [BordenaQAWindow]::ShowWindow($qaHandle,9) | Out-Null;
+ @{maximized=$qaMax;minimized=$qaMin;restored=(![BordenaQAWindow]::IsIconic($qaHandle));caption=(([BordenaQAWindow]::GetWindowLong($qaHandle,-16) -band 0xC00000) -ne 0)} | ConvertTo-Json -Compress
+ `],{encoding:'utf8'});report.nativeWindow=JSON.parse(windowResult);assert.ok(Object.values(report.nativeWindow).every(Boolean),windowResult);
+ check('native system maximize/restore/minimize remain available');
+ report.errors=host.errors;report.external=host.external;assert.deepEqual(host.errors,[]);assert.deepEqual(host.external,[]);report.status='PASS';
+} catch(error){report.status='FAIL';report.failure=error.stack;report.body=await host?.page.locator('body').innerText().catch(()=>null);report.errors=host?.errors;process.exitCode=1}
+finally{await host?.close().catch(e=>{report.closeError=e.message;report.status='FAIL';process.exitCode=1});await fs.writeFile(path.join(root,'docs/evidence/08-native.json'),JSON.stringify(report,null,2));console.log(report)}
