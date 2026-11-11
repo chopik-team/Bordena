@@ -24,14 +24,14 @@
 | Launcher regression | PASS | 66 frontend tests; 41 Rust tests; privacy/Dev/Stable регрессии включены |
 | Production Launcher | PARTIAL | Собирается без QA fixture transport; отдельный локальный комплект интеграции. Его публичный выпуск и обновление установленного Launcher отдельно не опубликованы |
 | Лицензии | PASS | Doska / Margarita Romenkova / MIT, зависимости, OFL, Rust notices и исходники MPL включены |
-| Очистка | PASS | 10 сгенерированных копий QA-скриптов удалены после проверенного архива; оригинальные тесты/профили/лицензии/старые релизы сохранены; повторная сборка выполнена |
+| Очистка | PASS | 10 сгенерированных копий QA-скриптов и 2 неиспользуемых server-конфига удалены после проверенных архивов; оригинальные тесты/профили/лицензии/старые релизы сохранены; повторная сборка выполнена |
 | CHOPIK assets | PASS | 4 ресурса скопированы, SHA-256 совпали; runtime-зависимость не добавлена |
 | Подпись доставки | PASS | Долговременный закреплённый Minisign key; подписаны installer и точные metadata; независимая проверка в Rust |
 | Windows Authenticode | PENDING | Доступного сертификата издателя нет; EXE не имеет Authenticode; возможен SmartScreen |
 | Чистая Windows 10 x64 | PENDING | Отдельная VM/компьютер недоступны |
 | Чистая Windows 11 x64 | PENDING | Проверена существующая Windows 11 x64 с WebView2, не чистая ОС |
 | Установка отсутствующего WebView2 | PENDING | Настроен штатный downloadBootstrapper; чистая ОС без runtime не проверена |
-| GitHub | PARTIAL | Публичный репозиторий chopik-team/Bordena создан; состояние загрузки исходников и публикации — в release report |
+| GitHub source | PASS | Очищенные исходники опубликованы в main chopik-team/Bordena; независимый снимок собран до EXE/NSIS и запущен в native QA |
 | Public release / публичная загрузка в Launcher | PENDING | Не публиковать непроверенный установщик; нужен clean-OS QA и проверка реальной GitHub release ссылки |
 | CI | PARTIAL | Единый workflow расширен: проверки, NSIS, optional protected signing и независимый verifier. Реальный удалённый запуск и signing secrets ещё не подтверждены |
 

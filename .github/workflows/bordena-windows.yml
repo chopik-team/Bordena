@@ -13,9 +13,13 @@ on:
     tags: ['v*']
 permissions:
   contents: read
+concurrency:
+  group: bordena-windows-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
   windows:
     runs-on: windows-2022
+    timeout-minutes: 35
     env:
       NO_UPDATE_NOTIFIER: '1'
       PNPM_DISABLE_SELF_UPDATE_CHECK: '1'
