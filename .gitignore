@@ -57,6 +57,7 @@ plan
 # Local toolchain and private development profiles
 /.tools/
 /artifacts/
+/archives/
 !/docs/evidence/*.log
 # Release secrets, system dumps and local QA material
 .env.*

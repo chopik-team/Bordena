@@ -21,14 +21,39 @@ Var BordenaInstallMutex
     Abort "Close ${productName} and retry. Your projects have not been changed."
   ${EndIf}
 !macroend
-!macro NSIS_HOOK_PREINSTALL
+!macro BordenaAcquireInstallerMutex
   System::Call 'kernel32::CreateMutexW(p 0, i 0, w "Local\${BUNDLEID}.installer") p.r0 ?e'
   Pop $1
   StrCpy $BordenaInstallMutex $0
+  ${If} $0 = 0
+    SetErrorLevel 1603
+    Abort "Cannot reserve the installer lock."
+  ${EndIf}
   ${If} $1 = 183
     SetErrorLevel 1618
     Abort "Another installation is already in progress."
   ${EndIf}
+!macroend
+!macro NSIS_HOOK_PREINSTALL
+  !insertmacro BordenaAcquireInstallerMutex
+  ; Recheck under the lock: another installer may have finished after the wizard opened.
+  ReadRegStr $R5 HKCU "Software\CHOPIK\Applications\${BUNDLEID}" "Version"
+  ${If} $R5 != ""
+    nsis_tauri_utils::SemverCompare "${VERSION}" $R5
+    Pop $R6
+    ${If} $R6 = -1
+      SetErrorLevel 1638
+      Abort "A newer version is already installed."
+    ${EndIf}
+    ${If} $R6 != 0
+    ${AndIf} $R6 != 1
+      SetErrorLevel 1603
+      Abort "Cannot verify the registered version."
+    ${EndIf}
+  ${EndIf}
+!macroend
+!macro NSIS_HOOK_PREUNINSTALL
+  !insertmacro BordenaAcquireInstallerMutex
 !macroend
 !macro NSIS_HOOK_POSTINSTALL
   WriteRegStr HKCU "Software\CHOPIK\Applications\${BUNDLEID}" "InstallPath" "$INSTDIR"

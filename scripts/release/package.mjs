@@ -9,6 +9,8 @@ const options=Object.fromEntries(process.argv.slice(2).map(a=>{const [key,...res
 const version=options.version??JSON.parse(fs.readFileSync(path.join(root,'package.json'),'utf8')).version;
 if(!/^\d+\.\d+\.\d+$/.test(version))throw Error('Machine SemVer required');
 const staging=options.staging===true;
+const sourceRevision=options['source-commit']??process.env.GITHUB_SHA??null;
+if(sourceRevision!==null&&!/^[a-f0-9]{40}$/.test(sourceRevision))throw Error('Expected a full source commit SHA');
 if(!staging&&version!==JSON.parse(fs.readFileSync(path.join(root,'package.json'),'utf8')).version)throw Error('Production package must match source version');
 const label=displayVersion(version), basename=`Bordena-${label.replace(' ','')}-Windows-x64`;
 const output=path.resolve(root,options.output??`artifacts/${basename}`);
@@ -40,7 +42,7 @@ const payload={schema_version:1,product_id:'team.chopik.bordena',channel:'stable
 const payloadFile=path.join(output,'bordena-release.payload.json');fs.writeFileSync(payloadFile,JSON.stringify(payload,null,2));sign(payloadFile);
 fs.writeFileSync(path.join(output,'bordena-release.json'),JSON.stringify({payload:fs.readFileSync(payloadFile,'utf8'),signature:fs.readFileSync(payloadFile+'.sig','utf8').trim()},null,2));
 copy(path.join(root,'integrations/chopik-launcher/trust/bordena.pub'),path.join(output,'bordena.pub'));
-fs.writeFileSync(path.join(output,'VERSION.json'),JSON.stringify({version,display_version:label,channel:staging?'staging':'stable',staging,identifier:staging?'team.chopik.bordena.release-qa':'team.chopik.bordena',windows:metadata,authenticode:'UNSIGNED',installer_signature:'minisign; pinned CHOPIK release key',publication:'NOT_PUBLISHED',built_at:new Date().toISOString()},null,2));
+fs.writeFileSync(path.join(output,'VERSION.json'),JSON.stringify({version,display_version:label,channel:staging?'staging':'stable',staging,identifier:staging?'team.chopik.bordena.release-qa':'team.chopik.bordena',source_revision:sourceRevision,windows:metadata,authenticode:'UNSIGNED',installer_signature:'minisign; pinned CHOPIK release key',publication:'NOT_PUBLISHED',built_at:new Date().toISOString()},null,2));
 fs.writeFileSync(path.join(output,'RELEASE_NOTES.md'),`# Bordena ${label}${staging?' — STAGING':''}\n\n${notes}\n\nPublisher: CHOPIK Team / Stanislav Smirnov. Original Doska: Margarita Romenkova, MIT. Windows Authenticode certificate is not configured; cryptographic package signature is separate.\n`);
 const files=[];function walk(dir){for(const e of fs.readdirSync(dir,{withFileTypes:true})){const p=path.join(dir,e.name);if(e.isDirectory())walk(p);else if(e.name!=='SHA256SUMS.txt')files.push(p)}}walk(output);
 fs.writeFileSync(path.join(output,'SHA256SUMS.txt'),files.sort().map(p=>`${hash(p)}  ${path.relative(output,p).replaceAll('\\','/')}`).join('\n')+'\n');
