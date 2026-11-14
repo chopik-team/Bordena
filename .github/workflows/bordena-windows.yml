@@ -40,6 +40,17 @@ jobs:
       - run: pnpm check:i18n
       - run: pnpm type-check
       - run: pnpm lint
+      - name: Repeat release blocker regressions
+        shell: pwsh
+        run: |
+          node -e 'const fs=require("node:fs"); const os=require("node:os"); console.log(JSON.stringify({node:process.version,uv:process.versions.uv,temp:os.tmpdir(),canonicalTemp:fs.realpathSync.native(os.tmpdir())}))'
+          pnpm --filter @bordena/core exec vitest run tests/move-card-to-board.test.ts
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          foreach ($attempt in 1..5) {
+            Write-Output "Vault watcher regression $attempt/5 (not a retry)"
+            pnpm --filter @bordena/vault exec vitest run integration-tests/vault.test.ts
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          }
       - run: pnpm test
       - run: cargo test --locked --manifest-path apps/desktop/src-tauri/Cargo.toml
       - run: cargo fetch --locked --manifest-path apps/desktop/src-tauri/Cargo.toml

@@ -22,6 +22,7 @@ describe("Vault on disk", () => {
   let board: TestBoard
   let vault: Vault
   let changes: number
+  let fs: ReturnType<typeof nodeFs>
 
   const path = (...parts: string[]) => join(root, ...parts)
   const read = (...parts: string[]) => readFile(path(...parts), "utf8")
@@ -31,8 +32,9 @@ describe("Vault on disk", () => {
     root = await mkdtemp(join(tmpdir(), "vault-"))
     board = await installBoard([TODO, DONE])
     changes = 0
+    fs = nodeFs()
     vault = new Vault({
-      fs: nodeFs(),
+      fs,
       board,
       boardId: BOARD_ID,
       root,
@@ -41,6 +43,8 @@ describe("Vault on disk", () => {
   })
 
   afterEach(async () => {
+    // Close native handles before deleting their directory, including failures.
+    await fs?.closeWatchers()
     await rm(root, { recursive: true, force: true })
   })
 
@@ -245,11 +249,11 @@ describe("Vault on disk", () => {
     const stop = await vault.watch()
     try {
       await writeFile(path("to_do", "Idea.md"), "a thought\n", "utf8")
-      await expect
-        .poll(async () => (await board.cards()).length, { timeout: 5000 })
-        .toBe(1)
+      await expect.poll(() => changes, { timeout: 5000 }).toBe(1)
+      expect(await board.cards()).toHaveLength(1)
     } finally {
       stop()
+      await fs.closeWatchers()
     }
   })
 })

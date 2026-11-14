@@ -1,4 +1,5 @@
-import { beforeEach, describe, expect, it } from "vitest"
+import { afterEach, beforeEach, describe, expect, it } from "vitest"
+import { setLanguage } from "@bordena/i18n"
 import { CARDS, COLUMNS, DASHBOARDS } from "../src/api/constants"
 import type { Card } from "../src/types"
 import { installMemoryRuntime, rows } from "./memory-runtime"
@@ -30,6 +31,7 @@ const liveIn = (columnId: string) =>
   ) as Card[]
 
 beforeEach(installMemoryRuntime)
+afterEach(() => setLanguage("system"))
 
 describe("moveCardToBoard", () => {
   it("copies the card to the top of the target board's first live column and tombstones the original", async () => {
@@ -78,23 +80,30 @@ describe("moveCardToBoard", () => {
     expect(stored("moved").columnId).toBe("here")
     expect(stored("moved").deletedAt).toBeNull()
   })
-  it("creates the first section when a valid empty board receives a card", async () => {
-    rows.set(`${DASHBOARDS}/empty`, board("empty"))
-    rows.set(`${COLUMNS}/here`, column("here", "from", "a0"))
-    rows.set(`${CARDS}/moved`, card("moved", "here", "a0"))
-    const { moveCardToBoard } =
-      await import("../src/api/operations/move-card-to-board")
-    const targetId = await moveCardToBoard("moved", "empty")
-    const target = stored(targetId)
-    const section = rows.get(`${COLUMNS}/${target.columnId}`) as {
-      dashboardId: string
-      title: string
+  it.each([
+    ["ru", "Задачи"],
+    ["en", "Tasks"],
+  ] as const)(
+    "creates the first section on an empty board in %s",
+    async (language, title) => {
+      setLanguage(language)
+      rows.set(`${DASHBOARDS}/empty`, board("empty"))
+      rows.set(`${COLUMNS}/here`, column("here", "from", "a0"))
+      rows.set(`${CARDS}/moved`, card("moved", "here", "a0"))
+      const { moveCardToBoard } =
+        await import("../src/api/operations/move-card-to-board")
+      const targetId = await moveCardToBoard("moved", "empty")
+      const target = stored(targetId)
+      const section = rows.get(`${COLUMNS}/${target.columnId}`) as {
+        dashboardId: string
+        title: string
+      }
+      expect(section.dashboardId).toBe("empty")
+      expect(section.title).toBe(title)
+      expect(target.attachments).toEqual([attachment])
+      expect(target.body).toBe("notes")
     }
-    expect(section.dashboardId).toBe("empty")
-    expect(section.title).toBe("Задачи")
-    expect(target.attachments).toEqual([attachment])
-    expect(target.body).toBe("notes")
-  })
+  )
 })
 
 describe("moveCardToColumn", () => {

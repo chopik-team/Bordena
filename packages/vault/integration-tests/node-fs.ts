@@ -6,7 +6,7 @@ import {
   rm,
   writeFile,
 } from "node:fs/promises"
-import { watch } from "node:fs"
+import { realpathSync, watch } from "node:fs"
 import type { VaultFs } from "../src/column-folder"
 
 /** A missing path is `null`, never a throw: what `tauriFs` does with `exists`. */
@@ -19,8 +19,14 @@ async function missing<T>(work: Promise<T>): Promise<T | null> {
 }
 
 /** The vault's filesystem on real disk, matching `tauriFs` in the client. */
-export function nodeFs(): VaultFs {
+export function nodeFs(): VaultFs & { closeWatchers(): Promise<void> } {
+  const closing = new Set<Promise<void>>()
+  const stops = new Set<() => void>()
   return {
+    async closeWatchers() {
+      for (const stop of stops) stop()
+      await Promise.all(closing)
+    },
     read: (path) => missing(readFile(path, "utf8")),
 
     async write(path, content) {
@@ -54,8 +60,25 @@ export function nodeFs(): VaultFs {
     },
 
     watch(path, listener) {
-      const watcher = watch(path, { recursive: true }, () => listener())
-      return Promise.resolve(() => watcher.close())
+      // Windows TEMP can contain 8.3 aliases. libuv 1.52.1 can abort on the
+      // mismatch between that spelling and long paths in native notifications.
+      // Resolve before watching; an error handler cannot catch a native abort.
+      const watcher = watch(
+        realpathSync.native(path),
+        { recursive: true },
+        () => listener()
+      )
+      const stop = () => watcher.close()
+      stops.add(stop)
+      const closed = new Promise<void>((resolve) => {
+        watcher.once("close", () => {
+          stops.delete(stop)
+          closing.delete(closed)
+          resolve()
+        })
+      })
+      closing.add(closed)
+      return Promise.resolve(stop)
     },
   }
 }
