@@ -1,13 +1,13 @@
 # Bordena W 1.0 — release checklist
 
-Обновлено 12.11.2026. PASS означает фактическую проверку; PARTIAL — проверена только указанная область; PENDING — проверка или публикация не выполнена.
+Обновлено 14.11.2026. PASS означает фактическую проверку; PARTIAL — проверена только указанная область; PENDING — проверка или публикация не выполнена.
 
 | Проверка | Статус | Результат |
 |---|---|---|
 | Baseline / откат исходников | PASS | Снимки Bordena и Launcher, обратное применение patch в отдельном Git index; исходный index сохранён |
 | Полный архив AW 0.82 | PASS | Проверены содержимое, SHA-256 и исходный EXE |
 | Версии | PASS | W 1.0 / 1.0.0; 19 package manifests; Cargo; Tauri; AW history RU/EN |
-| TypeScript / lint / JS tests | PASS | 13 typecheck, 8 lint tasks; 684 JS/TS tests |
+| TypeScript / lint / JS tests | PASS | 13 typecheck, 8 lint tasks; 685 JS/TS tests |
 | Rust Bordena | PASS | 3 tests; Windows release build |
 | Переводы | PASS | 796 literal keys, без пропусков |
 | Native EXE и BAT | PASS | Встроенный release UI, офлайн, отдельные профили; W 1.0 в About |
@@ -35,7 +35,14 @@
 | Установка отсутствующего WebView2 | PENDING | Настроен штатный downloadBootstrapper; чистая ОС без runtime не проверена |
 | GitHub source | PASS | Очищенные исходники опубликованы в main chopik-team/Bordena; независимый снимок собран до EXE/NSIS и запущен в native QA |
 | Public release / публичная загрузка в Launcher | PENDING | Не публиковать непроверенный установщик; нужен clean-OS QA и проверка реальной GitHub release ссылки |
-| CI | PARTIAL | Единый workflow расширен; Actions закреплены SHA. Удалённые runs созданы, пока queued без runner/jobs; signing secrets не настроены |
+| Локализация CI-теста | PASS | Локально и на GitHub: явные RU/EN fixtures, 5 tests; полный core 259 PASS; системная локаль не менялась |
+| fs.watch | PASS | На Node 24.19.0 воспроизведён native abort на 8.3; canonical path + close-before-cleanup; 10 локальных suite runs / 130 tests и 5 полных удалённых suite runs PASS, без retries/serialization |
+| Актуальная локальная регрессия | PASS | 685 JS/TS, 3 Rust, 13 typecheck, 8 lint tasks |
+| Отмена NSIS до копирования | PASS | Реальная Escape/Cancel, exit 1; 76 программных и 246 QA profile files сохранили каждый SHA-256 |
+| CI | PASS | [Run 43630992150](https://github.com/chopik-team/Bordena/actions/runs/43630992150) / commit 58ae23f4fa693dc39ee8868fbc7016d5236d5600: тесты и полный EXE/NSIS build завершены успешно |
+| CI artifact / native запуск | PASS | Реально скачан artifact 14128516893; ZIP digest GitHub совпал, все 62 файла сверены; FileVersion 1.0.0, лицензии и native QA полученного EXE проверены; это не GitHub Release download |
+| Секреты в CI logs | PASS | Полный успешный job log проверен на credential строку и private-key/token patterns; не обнаружены; secrets в этом run не предоставлялись |
+| Защищённое подписание CI | PENDING | GitHub audit: secrets/environments отсутствуют, main protection не настроен; условный signing-step не подтверждает защищённое подписание. Локальный DPAPI-ключ сохранён |
 
 Команды: `pnpm check:version`, `pnpm check:i18n`, `pnpm type-check`, `pnpm lint`, `pnpm test`, `pnpm build:windows`; `cargo test --locked --manifest-path apps/desktop/src-tauri/Cargo.toml`; `pnpm --filter @bordena/e2e exec node w10-release-native.mjs`; `pnpm --filter @bordena/e2e exec node w10-launcher-native.mjs`.
 

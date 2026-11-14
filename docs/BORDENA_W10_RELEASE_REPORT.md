@@ -1,8 +1,8 @@
 # Bordena W 1.0 — релизный отчёт
 
-Дата отчёта: 11.11.2026; дополнено 12.11.2026. Машинная версия: **1.0.0**. Пользовательская версия: **Bordena W 1.0**.
+Дата отчёта: 11.11.2026; дополнено 14.11.2026. Машинная версия: **1.0.0**. Пользовательская версия: **Bordena W 1.0**.
 
-**BUILD READY — PASS. Локальный Release Candidate — подготовлен; публичный выпуск удержан обязательными внешними проверками. PUBLIC RELEASED — PENDING.** Необходимые чистые Windows 10/11 и публичный GitHub download пока не подтверждены. Это не заявление о состоявшемся публичном релизе.
+**BUILD READY — PASS (локально и удалённый CI). RELEASE CANDIDATE READY — PARTIAL (локальный подписанный комплект проверен; обязательные внешние проверки не закрыты). PUBLIC RELEASED — PENDING.** Необходимые чистые Windows 10/11 и публичный GitHub Release download пока не подтверждены. Это не заявление о состоявшемся публичном релизе.
 
 ## Изменения
 
@@ -67,6 +67,97 @@ Launcher integration candidate: `C:\CHOPIK Launcher\artifacts\CHOPIK-Launcher-AW
 
 До публичного Stable обязательны: clean Windows 10/11, WebView2-absent install, управляемые disk-full/OS interruption проверки, загрузка и сверка фактического GitHub installer/metadata, CI на удалённом runner и защищённые release secrets. Проверка на существующей Windows 11 с runtime не заменяет чистые ОС. Полный список статусов — [release checklist](BORDENA_W10_RELEASE_CHECKLIST.md).
 
-GitHub Actions workflow расширен без второго CI: фиксированные версии инструментов, пять официальных Actions закреплены проверенными commit SHA, dependency fetch перед offline license audit, проверки, NSIS и optional protected signing. Удалённые runs созданы, но пока находятся в очереди без runner/jobs; это внешний PENDING, а не подтверждённый успех CI.
+GitHub Actions workflow расширен без второго CI: фиксированные версии инструментов, пять официальных Actions закреплены проверенными commit SHA, dependency fetch перед offline license audit, проверки, NSIS и optional signing. Исторический run 43100550434 завершился FAIL на pnpm test: locale-dependent assertion и native fs.watch assertion. Полный старый журнал сохранён в `.tools/w10-ci-failure.log`; исправления и новый run описаны ниже.
 
 Рабочая Git-история Doska не перезаписана; upstream оставлен read-only, origin указывает на утверждённый репозиторий. Публичный снимок исключает локальные профили, ключи, инструменты, большие сборки и внутренние личные отчёты. Воспроизводимость и реальная публикация исходников фиксируются в `evidence/w10-public-source.json` и `evidence/w10-github-publication.json`. Native integration regression сохранена в Launcher `scripts/test-bordena-w10-delivery.mjs` и `scripts/test-bordena-w10-uninstall.mjs`; staging-фикстуры остаются локальными. Публичный бинарный Release не создаётся, пока обязательные условия не закрыты.
+
+## Финальное закрытие блокеров — 14.11.2026
+
+**Локализация — PASS локально и на GitHub.** Тест move-card-to-board параметризован для явно
+выбранных ru → «Задачи» и en → «Tasks»; после теста возвращается system. Проверяются
+те же стабильные ID, данные и вложения. Язык ОС/всего CI не менялся. Отдельный файл:
+5 tests PASS; полный core: 259 PASS. Продуктовая логика не изменялась.
+
+**fs.watch — PASS локально и на GitHub.** Причина воспроизведена на той же Node 24.19.0 /
+libuv 1.52.1: native watcher на Windows-пути 8.3 аварийно завершился с 3221226505
+и тем же fs-event.c:72, на полном пути прошёл. Связанный upstream:
+[libuv issue 5010](https://github.com/libuv/libuv/issues/5010),
+[исправление 5152](https://github.com/libuv/libuv/pull/5152).
+В Node-адаптере integration-test перед fs.watch применяется realpathSync.native.
+Все watcher handles отслеживаются; cleanup ждёт событие close перед удалением
+временного каталога даже при неуспешном тесте. Watcher-test ждёт завершённое
+изменение доски, а не только появление первой записи. Проверен единственный
+watcher в исходном сценарии; разные файлы Vitest имеют отдельные процессы и
+уникальные mkdtemp-каталоги. Параллелизм полного набора сохранён, retries и
+подавление native abort не добавлялись, runtime не менялся. Полный vault
+integration-suite (13 tests) прошёл 10 отдельных процессов с TEMP/TMP в реальном
+8.3-пути: 130/130 PASS. Доказательства — w10-fs-watch-reproduction.json и
+w10-fs-watch-repeat.json в evidence.
+
+**Локальная регрессия — PASS:** 685 JS/TS, 3 Rust tests, 13 typecheck и 8 lint tasks.
+В workflow добавлены RU/EN regression и пять обязательных повторов полного vault
+integration-suite; первая ошибка останавливает workflow. Это повторные измерения,
+а не попытки получить случайный PASS.
+
+**Удалённый CI — PASS:**
+[43630992150](https://github.com/chopik-team/Bordena/actions/runs/43630992150),
+commit `58ae23f4fa693dc39ee8868fbc7016d5236d5600`. Полностью завершились проверки
+версии/i18n, typecheck, lint, RU/EN, пять vault suite runs, весь pnpm test,
+Rust tests, license audit, release EXE/NSIS и upload-artifact.
+Artifact `bordena-windows-candidate` (ID 14128516893) реально скачан через GitHub
+API: 8 392 336 байт, ZIP SHA-256
+`5f50d3493346b35745ca8a79f7a83d24cdf2686bf89fbe203d181181e7f116a4`
+совпал с GitHub digest. Все 62 распакованных файла сверены с ZIP по SHA-256;
+EXE и NSIS имеют FileVersion 1.0.0 / ProductName Bordena, лицензии Doska/MIT и
+уведомления включены. Полученный EXE, а не прежняя локальная копия, прошёл native
+embedded QA в отдельном .tools/qa-* профиле: W 1.0, RU/EN, light/dark,
+Compact/Focus, Undo/Redo и сохранение ID столбца, 640–1920px, годовой календарь;
+внешних app requests/errors нет, новые скриншоты не создавались.
+Это скачивание Actions artifact, а не публичных Release assets.
+Лог (175 927 байт) проверен на конкретную credential строку и признаки
+приватных ключей/GitHub tokens: не обнаружены. Доказательства —
+evidence/w10-final-ci.json и w10-final-ci-native.json; исходный лог —
+локальный .tools/w10-ci-success-132557323707.log.
+CI signing-step штатно пропущен на push; remote candidate не подписан и не
+подменяет прежний локальный подписанный комплект. Исходники приложения между
+его commit 58760bf и CI commit 58ae23f не менялись: только тесты и workflow.
+Исходные предупреждения nested-button в UI-тесте, bundle size и deprecated
+Node20 Actions runtime не маскировались; они не вызвали failure и сохранены
+в полном логе. Вне минимального исправления release blockers UI не переделывался.
+
+**Отмена NSIS — PASS:** Escape на welcome-page настоящего QA installer до
+копирования файлов, exit 1. SHA-256 всех 76 программных файлов и 246 файлов
+QA-профиля не изменились; окно установщика закрылось. Доказательство:
+evidence/w10-installer-cancel.json. Это не тест прерывания посреди установки.
+
+**Чистые ОС / WebView2 / аварийное восстановление — PENDING.** Доступна существующая
+Windows 11 Pro 10.0.26300 с Runtime. Установленных Hyper-V/VBox/VMware-инструментов,
+VM services и предоставленных чистых Windows VM не обнаружено. Основная машина
+и её Runtime не изменялись. Протокол оставшихся проверок —
+BORDENA_W10_CLEAN_WINDOWS_QA.md. Согласовано оставить небольшой Setup с
+downloadBootstrapper: интернет нужен при отсутствии Runtime; дополнительный
+offlineInstaller не добавляется. После установки приложение работает офлайн.
+
+**Подпись CI — PENDING.** Read-only GitHub audit: secrets list пуст, environments
+отсутствуют, protection main не настроен. Наличие условного signing-step не
+означает защищённую конфигурацию. Существующий DPAPI-ключ не ротировался, не
+выводился и на GitHub в этой итерации не передавался. До подписанного CI нужны
+защищённое release environment с review/branch policy и безопасная загрузка
+существующего ключа в environment secret. Windows Authenticode по-прежнему нет.
+Локальные закреплённые подписи продолжают проверяться независимо от CI.
+
+**GitHub Release / публичный Launcher — PENDING.** Stable v1.0.0 не создан из-за
+открытых обязательных gates. Поэтому анонимное скачивание настоящих Release assets
+и доставка этой версии публичным Launcher ещё не проверены. Существующая локальная
+проверка 0.8.2 → 1.0.0 → staging 1.0.1 сохраняет силу; это не публичный выпуск.
+Recovery snapshot — проверенная копия программных файлов; автоматический rollback
+всего реестра не заявляется. Точный ручной сценарий — обновлённый WINDOWS_INSTALL.md;
+оригинальная историческая инструкция сохранена в releases/.
+
+Launcher повторно проверен 14.11: **66 frontend / 41 Rust tests PASS**.
+Исходники Launcher в этой итерации не менялись; локальная production integration
+сборка повторно проверяет подписи прежнего кандидата. Изменённые файлы Bordena:
+три test/fixture-файла, существующий workflow и release/install документация.
+До начала изменений создан replay-verified baseline
+artifacts/Bordena-W1.0-before-final-blockers-20261114.*; рабочий HEAD и Git index
+сохранены. Старые архивы, подписанные комплекты, лицензии и CHOPIK assets сохранены.
