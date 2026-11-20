@@ -34,7 +34,10 @@
 | Чистая Windows 11 x64 | PENDING | Проверена существующая Windows 11 x64 с WebView2, не чистая ОС |
 | Установка отсутствующего WebView2 | PENDING | Настроен штатный downloadBootstrapper; чистая ОС без runtime не проверена |
 | GitHub source | PASS | Очищенные исходники опубликованы в main chopik-team/Bordena; независимый снимок собран до EXE/NSIS и запущен в native QA |
-| Public release / публичная загрузка в Launcher | PENDING | Не публиковать непроверенный установщик; нужен clean-OS QA и проверка реальной GitHub release ссылки |
+| Публичный выпуск Bordena на GitHub | PASS | Stable Latest `v1.0.0`, 6 файлов анонимно скачаны, SHA-256 и подписи совпадают |
+| Распознавание выпуска локальным Launcher | PASS | Получены W 1.0 / 1.0.0 с GitHub и доступна кнопка «Установить» |
+| Публичная установка через Launcher | PENDING | Публичный выпуск совместимой сборки Launcher и установка через неё ещё не подтверждены |
+| Автоматический CI тега | FAIL | На `58760bf` повторились известные ошибки тестов RU/EN и `fs.watch`. Этот run не собирал файлы выпуска. [Run тега](https://github.com/chopik-team/Bordena/actions/runs/44734217298) |
 | Локализация CI-теста | PASS | Локально и на GitHub: явные RU/EN fixtures, 5 tests; полный core 259 PASS; системная локаль не менялась |
 | fs.watch | PASS | На Node 24.19.0 воспроизведён native abort на 8.3; canonical path + close-before-cleanup; 10 локальных suite runs / 130 tests и 5 полных удалённых suite runs PASS, без retries/serialization |
 | Актуальная локальная регрессия | PASS | 685 JS/TS, 3 Rust, 13 typecheck, 8 lint tasks |

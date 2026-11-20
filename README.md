@@ -13,16 +13,17 @@ Bordena — локальное приложение CHOPIK Team для прое�
 
 ## Установка
 
-Официальный репозиторий: [chopik-team/Bordena](https://github.com/chopik-team/Bordena).
-Проверенный установщик появится в [GitHub Releases](https://github.com/chopik-team/Bordena/releases) после прохождения релизной проверки. Наличие исходников не означает, что публичный релиз уже опубликован.
+**Bordena W 1.0** доступна в [GitHub Releases](https://github.com/chopik-team/Bordena/releases/tag/v1.0.0). [Скачать Setup для Windows x64](https://github.com/chopik-team/Bordena/releases/download/v1.0.0/Bordena-W1.0-Windows-x64-Setup.exe).
 
 Основной файл: `Bordena-W1.0-Windows-x64-Setup.exe`. Node.js, Rust и исходники пользователю не нужны. При отсутствии Microsoft WebView2 установщик использует штатную установку runtime; для этого первоначально нужен интернет. После установки Bordena работает офлайн.
+
+Setup подписан ключом доставки CHOPIK. Из-за отсутствия Windows Authenticode может появиться предупреждение SmartScreen. Установка проверена на Windows 11 с установленным WebView2. Чистые Windows 10/11 и установка при отсутствии WebView2 пока не проверены.
 
 ## Данные и обновления
 
 Пользовательские проекты хранятся отдельно от заменяемых файлов приложения. Идентификатор остаётся `team.chopik.bordena`. Перед обновлением сохраните изменения, сделайте резервную копию в настройках и закройте Bordena.
 
-Прямая установка и CHOPIK Launcher используют один официальный источник — GitHub Releases. План доставки: подпись метаданных и пакета, проверка версии, размера и SHA-256 перед запуском NSIS. В Bordena нет второго фонового механизма обновления. Фактическое состояние внедрения и проверок — в [релизном отчёте](docs/BORDENA_W10_RELEASE_REPORT.md).
+Официальный источник установки — GitHub Releases. Локальная интеграционная сборка CHOPIK Launcher распознаёт опубликованную версию W 1.0. Публичный выпуск совместимого Launcher ведётся отдельно. Результаты проверок описаны в [релизном отчёте](docs/BORDENA_W10_RELEASE_REPORT.md).
 
 ## Разработка
 
